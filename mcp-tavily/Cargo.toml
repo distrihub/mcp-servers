@@ -1,6 +1,6 @@
 [package]
-name = "mcp-coder"
-description = "MCP coder for generating code"
+name = "mcp-tavily"
+description = "MCP server for Tavily search API integration with AI-powered web search"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,15 +8,16 @@ authors.workspace = true
 repository.workspace = true
 
 [[bin]]
-name = "mcp-coder"
+name = "mcp-tavily"
 path = "src/main.rs"
 
 [lib]
-name = "mcp_coder"
+name = "mcp_tavily"
 path = "src/lib.rs"
 
 [dependencies]
 # Workspace dependencies
+async-mcp = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -24,12 +25,8 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-clap = { workspace = true }
-async-mcp = { workspace = true }
-url = "2.4"
-twitter-v2 = "0.1"
-uuid = { version = "1.0", features = ["v4"] }
+url = { workspace = true }
+reqwest = { workspace = true }
 
 [dev-dependencies]
-tempfile = "3.0"
-tokio-test = "0.4"
+dotenv = "0.15"

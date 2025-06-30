@@ -1,6 +1,6 @@
 use anyhow::Result;
 use async_mcp::transport::ServerStdioTransport;
-use mcp_twitter::build;
+use mcp_tavily::build;
 
 #[tokio::main]
 async fn main() -> Result<()> {
