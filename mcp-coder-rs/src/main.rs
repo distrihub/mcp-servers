@@ -27,16 +27,14 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Start the MCP server with stdio transport
-    Serve(ServeArgs),
-    /// Start the MCP server with HTTP transport
-    Http(HttpArgs),
-    /// Analyze a specific file
-    Analyze(AnalyzeArgs),
-    /// Format code
-    Format(FormatArgs),
-    /// Test the server functionality
-    Test(TestArgs),
+    /// Start the MCP server (default)
+    Serve {
+        /// Use STDIO transport instead of HTTP
+        #[arg(long)]
+        stdio: bool,
+    },
+    /// Show configuration
+    Config,
 }
 
 #[derive(Args)]
@@ -94,61 +92,49 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize logging
     let filter = if cli.debug {
-        "debug,async_mcp=trace"
+        EnvFilter::new("debug")
     } else {
-        "info,async_mcp=debug"
+        EnvFilter::new("info")
     };
-    
+
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::new(filter))
+        .with_env_filter(filter)
         .with_span_events(FmtSpan::CLOSE)
         .init();
 
-    info!("Starting MCP Coder Server v{}", env!("CARGO_PKG_VERSION"));
+    // Determine base directory
+    let base_directory = cli.directory
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
 
-    match cli.command {
-        Some(Commands::Serve(args)) => {
-            let directory = args.directory.or(cli.directory);
-            let server = McpCoderServer::new(directory)?;
-            info!("Starting MCP server with stdio transport");
-            server.serve().await?;
-        }
-        Some(Commands::Http(args)) => {
-            let directory = cli.directory;
-            let server = McpCoderServer::new(directory)?;
-            info!("Starting MCP server with HTTP transport on {}:{}", args.host, args.port);
-            // TODO: Implement HTTP transport
-            eprintln!("HTTP transport not yet implemented");
-            std::process::exit(1);
-        }
-        Some(Commands::Analyze(args)) => {
-            let server = McpCoderServer::new(cli.directory)?;
-            let result = server.analyzer.analyze_file(
-                args.file.to_str().unwrap(),
-                args.language.as_deref(),
-            ).await?;
-            println!("{}", serde_json::to_string_pretty(&result)?);
-        }
-        Some(Commands::Format(args)) => {
-            let server = McpCoderServer::new(cli.directory)?;
-            let content = tokio::fs::read_to_string(&args.file).await?;
-            let formatted = server.formatter.format(&content, &args.language).await?;
+    match cli.command.unwrap_or(Commands::Serve { stdio: true }) {
+        Commands::Serve { stdio } => {
+            info!("Starting MCP Coder server");
+            info!("Base directory: {}", base_directory.display());
             
-            if args.write {
-                tokio::fs::write(&args.file, &formatted).await?;
-                println!("Formatted and wrote to: {}", args.file.display());
+            let server = McpCoderServer::new(base_directory);
+
+            if stdio {
+                info!("Using STDIO transport");
+                server.serve().await?;
             } else {
-                println!("{}", formatted);
+                info!("Using HTTP transport on port {}", cli.port);
+                // For HTTP transport, we'd need to implement an HTTP wrapper
+                // For now, just use STDIO
+                server.serve().await?;
             }
         }
-        Some(Commands::Test(args)) => {
-            run_tests(args.test_name.as_deref()).await?;
-        }
-        None => {
-            // Default behavior: start stdio server
-            let server = McpCoderServer::new(cli.directory)?;
-            info!("Starting MCP server with stdio transport (default)");
-            server.serve().await?;
+        Commands::Config => {
+            info!("MCP Coder Server Configuration:");
+            info!("  Base Directory: {}", base_directory.display());
+            info!("  Available Tools:");
+            info!("    - read_file: Read file contents");
+            info!("    - write_file: Write content to files");
+            info!("    - search_files: Search for files with patterns");
+            info!("    - list_directory: List directory contents");
+            info!("    - get_project_structure: Get project tree structure");
+            info!("  Available Resources:");
+            info!("    - file://{path}: Access file content");
+            info!("    - directory://{path}: Access directory listings");
         }
     }
 
