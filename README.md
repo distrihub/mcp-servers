@@ -8,14 +8,14 @@ This workspace contains multiple MCP server implementations, each providing spec
 
 ## Available MCP Servers
 
-| Server | Status | Description | Tools | Resources | Use Cases |
-|--------|--------|-------------|-------|-----------|-----------|
-| **mcp-coder** | ✅ Active | File system operations, code analysis & formatting | `read_file`, `write_file`, `search_files`, `list_directory`, `get_project_structure` | `file://{path}`, `directory://{path}` | Code development, file management, project analysis |
-| **mcp-twitter** | ✅ Active | Twitter/X API integration | `post_tweet`, `search_tweets`, `get_user_info`, `get_user_timeline`, `get_tweet_analytics` | `twitter://user/{id}`, `twitter://tweet/{id}`, `twitter://trends/{location}` | Social media automation, content posting, analytics |
-| **mcp-spider** | 🔧 Work in Progress | Advanced web crawling with spider-rs | `crawl`, `scrape` | `spider://crawl/{url}`, `spider://scrape/{url}` | Web data extraction, site mapping, content analysis |
-| **mcp-crawler** | 🔧 Work in Progress | General web crawling and site mapping | `crawl_site`, `get_page_content`, `check_robots` | `crawler://site/{url}` | Simple web crawling, content extraction |
+| Server          | Status             | Description                                        | Tools                                                                                      | Resources                                                                    | Use Cases                                           |
+| --------------- | ------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------------- |
+| **mcp-coder**   | ✅ Active           | File system operations, code analysis & formatting | `read_file`, `write_file`, `search_files`, `list_directory`, `get_project_structure`       | `file://{path}`, `directory://{path}`                                        | Code development, file management, project analysis |
+| **mcp-twitter** | ✅ Active           | Twitter/X API integration                          | `post_tweet`, `search_tweets`, `get_user_info`, `get_user_timeline`, `get_tweet_analytics` | `twitter://user/{id}`, `twitter://tweet/{id}`, `twitter://trends/{location}` | Social media automation, content posting, analytics |
+| **mcp-spider**  | 🔧 Work in Progress | Advanced web crawling with spider-rs               | `crawl`, `scrape`                                                                          | `spider://crawl/{url}`, `spider://scrape/{url}`                              | Web data extraction, site mapping, content analysis |
+
 | **mcp-tavily** | 🔧 Work in Progress | Tavily search API integration | `search`, `search_news`, `get_extract` | `tavily://search/{query}` | AI-powered web search, news aggregation |
-| **mcp-kg** | 🔧 Work in Progress | Knowledge graph operations | `add_entity`, `add_relationship`, `query_graph`, `find_paths`, `get_neighbors` | `kg://entity/{id}`, `kg://graph/stats` | Knowledge management, relationship mapping |
+
 
 ### Server Details
 
@@ -392,9 +392,8 @@ npm install -g @modelcontextprotocol/inspector
 npx @modelcontextprotocol/inspector ./target/release/mcp-coder
 npx @modelcontextprotocol/inspector ./target/release/mcp-twitter
 npx @modelcontextprotocol/inspector ./target/release/mcp-spider
-npx @modelcontextprotocol/inspector ./target/release/mcp-crawler
 npx @modelcontextprotocol/inspector ./target/release/mcp-tavily
-npx @modelcontextprotocol/inspector ./target/release/mcp-kg
+
 ```
 
 ### Manual Testing with stdio
@@ -412,66 +411,6 @@ echo '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVe
 echo '{"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}' | ./target/release/mcp-coder
 ```
 
-## API Credentials Setup
-
-### Twitter API Setup
-
-1. Create a Twitter Developer account at https://developer.twitter.com
-2. Create a new app and generate API keys
-3. For read-only operations, you only need the Bearer Token
-4. For posting tweets, you need OAuth 1.0a credentials (API Key, API Secret, Access Token, Access Token Secret)
-
-### Tavily API Setup
-
-1. Sign up at https://tavily.com
-2. Generate an API key from your dashboard
-3. Set the `TAVILY_API_KEY` environment variable
-
-### Environment Variables
-
-The servers support loading credentials from environment variables:
-
-```bash
-# Twitter credentials
-export TWITTER_API_KEY="your_api_key"
-export TWITTER_API_SECRET="your_api_secret"
-export TWITTER_BEARER_TOKEN="your_bearer_token"
-export TWITTER_ACCESS_TOKEN="your_access_token"
-export TWITTER_ACCESS_TOKEN_SECRET="your_access_token_secret"
-
-# Tavily credentials
-export TAVILY_API_KEY="your_tavily_api_key"
-```
-
-## Performance and Scaling
-
-### Concurrent Requests
-
-Most servers support configurable concurrency:
-
-```bash
-# Configure maximum concurrent requests
-./target/release/mcp-spider --max-concurrency 20
-./target/release/mcp-crawler --max-concurrency 10
-```
-
-### Rate Limiting
-
-Servers respect API rate limits and implement polite crawling:
-
-- **mcp-twitter**: Respects Twitter API rate limits automatically
-- **mcp-spider**: Configurable delay between requests (default: 1s)
-- **mcp-crawler**: Configurable delay between requests (default: 1s)
-- **mcp-tavily**: Respects Tavily API rate limits
-
-### Memory Usage
-
-- **mcp-coder**: Low memory usage, suitable for large codebases
-- **mcp-twitter**: Minimal memory footprint
-- **mcp-spider**: Higher memory usage due to Chrome integration
-- **mcp-crawler**: Low memory usage
-- **mcp-tavily**: Minimal memory footprint
-- **mcp-kg**: Memory usage scales with graph size
 
 ## Troubleshooting
 

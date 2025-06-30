@@ -172,7 +172,7 @@ impl Default for BudgetConfig {
             max_pages: Some(1000),
             max_depth: Some(3),
             max_duration: Some(Duration::from_secs(300)), // 5 minutes
-            max_file_size: Some(10 * 1024 * 1024), // 10MB
+            max_file_size: Some(10 * 1024 * 1024),        // 10MB
             request_timeout: Some(Duration::from_secs(30)),
         }
     }
@@ -267,17 +267,16 @@ impl SpiderConfiguration {
         // Apply crawl configuration
         config.respect_robots_txt = self.crawl_config.respect_robots_txt;
         config.delay = self.crawl_config.delay.as_millis() as u64;
-        config.concurrency = self.crawl_config.concurrency;
+
         config.subdomains = self.crawl_config.subdomains;
         config.tld = self.crawl_config.tld;
         config.cache = self.crawl_config.cache;
-        config.use_cookies = self.crawl_config.use_cookies;
-        config.redirect_limit = self.crawl_config.redirect_limit;
+
         config.accept_invalid_certs = self.crawl_config.accept_invalid_certs;
 
         // Apply advanced options
         if !self.advanced_options.follow_redirects {
-            config.redirect_limit = 0;
+            config.redirect_limit = Box::new(0);
         }
 
         Ok(config)
