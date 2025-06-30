@@ -84,9 +84,7 @@ cargo build --release
 cargo build --release --bin mcp-coder
 cargo build --release --bin mcp-twitter
 cargo build --release --bin mcp-spider
-cargo build --release --bin mcp-crawler
 cargo build --release --bin mcp-tavily
-cargo build --release --bin mcp-kg
 ```
 
 ## Usage with STDIO
