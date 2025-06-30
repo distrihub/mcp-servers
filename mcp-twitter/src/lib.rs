@@ -1,12 +1,14 @@
 use anyhow::{anyhow, Result};
 use async_mcp::{
-    Content, PromptMessage, Resource, Server, Tool, ToolCall, ToolResult, ClientCapabilities, McpError
+    server::Server,
+    types::{Tool, Resource, ClientCapabilities, ToolResponseContent, Content},
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{json};
 use std::collections::HashMap;
 use reqwest::Client;
 use chrono::{DateTime, Utc};
+use tracing::{info, warn, error, debug};
 
 pub mod twitter_client;
 pub mod auth;

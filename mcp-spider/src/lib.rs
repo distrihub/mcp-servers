@@ -1,6 +1,9 @@
+#![recursion_limit = "256"]
+
 use anyhow::{anyhow, Result};
 use async_mcp::{
-    Content, PromptMessage, Resource, Server, Tool, ToolCall, ToolResult, ClientCapabilities, McpError
+    server::Server,
+    types::{Tool, Resource, ClientCapabilities, ToolResponseContent, Content},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};

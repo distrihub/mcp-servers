@@ -1,6 +1,6 @@
 [package]
-name = "mcp-coder"
-description = "MCP server for code analysis, formatting, and development tools"
+name = "mcp-crawler"
+description = "MCP server for general web crawling and site mapping"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,11 +8,11 @@ authors.workspace = true
 repository.workspace = true
 
 [[bin]]
-name = "mcp-coder"
+name = "mcp-crawler"
 path = "src/main.rs"
 
 [lib]
-name = "mcp_coder"
+name = "mcp_crawler"
 path = "src/lib.rs"
 
 [dependencies]
@@ -28,8 +28,14 @@ clap = { workspace = true }
 rpc-router = { workspace = true }
 signal-hook = { workspace = true }
 maplit = { workspace = true }
-walkdir = { workspace = true }
+reqwest = { workspace = true }
+url = { workspace = true }
 regex = { workspace = true }
+walkdir = { workspace = true }
+
+# Additional dependencies for crawling
+scraper = "0.17"
+robotstxt = "0.2"
 
 [dev-dependencies]
 tempfile = "3.0"

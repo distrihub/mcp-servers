@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use async_mcp::{
-    Content, PromptMessage, Resource, Server, Tool, ToolCall, ToolResult, ClientCapabilities, McpError
+    server::Server,
+    types::{Tool, Resource, ClientCapabilities, ToolResponseContent, Content},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -9,14 +10,23 @@ use std::path::{Path, PathBuf};
 use tokio::fs;
 use walkdir::WalkDir;
 use regex::Regex;
+use rpc_router::{Error, Handler, Request, Router, RouterBuilder};
 
 pub mod code_analyzer;
 pub mod formatter;
 pub mod file_manager;
+pub mod mcp;
 
 use code_analyzer::CodeAnalyzer;
 use formatter::CodeFormatter;
 use file_manager::FileManager;
+use crate::mcp::prompts::{prompts_get, prompts_list};
+use crate::mcp::resources::{resource_read, resources_list};
+use crate::mcp::tools::{register_tools, tools_list};
+use crate::mcp::types::{
+    CancelledNotification, JsonRpcError, JsonRpcResponse, ToolCallRequestParams,
+};
+use crate::mcp::utilities::*;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReadFileRequest {
@@ -44,8 +54,23 @@ pub struct FileInfo {
     pub is_directory: bool,
 }
 
+pub fn build_rpc_router() -> Router {
+    let builder = RouterBuilder::default()
+        // append resources here
+        .append_dyn("initialize", initialize.into_dyn())
+        .append_dyn("ping", ping.into_dyn())
+        .append_dyn("logging/setLevel", logging_set_level.into_dyn())
+        .append_dyn("roots/list", roots_list.into_dyn())
+        .append_dyn("prompts/list", prompts_list.into_dyn())
+        .append_dyn("prompts/get", prompts_get.into_dyn())
+        .append_dyn("resources/list", resources_list.into_dyn())
+        .append_dyn("resources/read", resource_read.into_dyn());
+    let builder = register_tools(builder);
+    builder.build()
+}
+
 pub struct McpCoderServer {
-    base_directory: PathBuf,
+    pub base_directory: PathBuf,
 }
 
 impl McpCoderServer {
@@ -53,128 +78,9 @@ impl McpCoderServer {
         Self { base_directory }
     }
 
-    pub async fn serve(&self) -> Result<()> {
-        let server = Server::new();
-
-        // Register tools
-        server.add_tool(Tool::new(
-            "read_file",
-            "Read the contents of a file",
-            json!({
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Path to the file to read"
-                    }
-                },
-                "required": ["path"]
-            }),
-        )).await?;
-
-        server.add_tool(Tool::new(
-            "write_file",
-            "Write content to a file",
-            json!({
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Path to the file to write"
-                    },
-                    "content": {
-                        "type": "string",
-                        "description": "Content to write to the file"
-                    }
-                },
-                "required": ["path", "content"]
-            }),
-        )).await?;
-
-        server.add_tool(Tool::new(
-            "search_files",
-            "Search for files in a directory",
-            json!({
-                "type": "object",
-                "properties": {
-                    "directory": {
-                        "type": "string",
-                        "description": "Directory to search in"
-                    },
-                    "pattern": {
-                        "type": "string",
-                        "description": "Regex pattern to match filenames"
-                    },
-                    "file_types": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "File extensions to filter by"
-                    }
-                },
-                "required": ["directory"]
-            }),
-        )).await?;
-
-        server.add_tool(Tool::new(
-            "list_directory",
-            "List contents of a directory",
-            json!({
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Path to the directory to list"
-                    }
-                },
-                "required": ["path"]
-            }),
-        )).await?;
-
-        server.add_tool(Tool::new(
-            "get_project_structure",
-            "Get the structure of a project directory",
-            json!({
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Path to the project root"
-                    },
-                    "max_depth": {
-                        "type": "integer",
-                        "description": "Maximum depth to traverse",
-                        "default": 3
-                    }
-                },
-                "required": ["path"]
-            }),
-        )).await?;
-
-        // Register resources
-        server.add_resource(Resource::new(
-            "file://{path}",
-            "File content resource",
-            Some("text/plain".to_string()),
-        )).await?;
-
-        server.add_resource(Resource::new(
-            "directory://{path}",
-            "Directory listing resource",
-            Some("application/json".to_string()),
-        )).await?;
-
-        // Set tool handlers
-        server.set_tool_handler(|call: ToolCall| async move {
-            self.handle_tool_call(call).await
-        }).await?;
-
-        // Set resource handler
-        server.set_resource_handler(|uri: &str| async move {
-            self.handle_resource_request(uri).await
-        }).await?;
-
-        server.start().await?;
-        Ok(())
+    pub async fn serve(&self) -> anyhow::Result<()> {
+        let router = build_rpc_router();
+        crate::mcp::utilities::serve_stdio(router).await
     }
 
     async fn handle_tool_call(&self, call: ToolCall) -> Result<ToolResult> {

@@ -1,6 +1,6 @@
 [package]
-name = "mcp-coder"
-description = "MCP server for code analysis, formatting, and development tools"
+name = "mcp-kg"
+description = "MCP server for knowledge graph operations and semantic search"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,11 +8,11 @@ authors.workspace = true
 repository.workspace = true
 
 [[bin]]
-name = "mcp-coder"
+name = "mcp-kg"
 path = "src/main.rs"
 
 [lib]
-name = "mcp_coder"
+name = "mcp_kg"
 path = "src/lib.rs"
 
 [dependencies]
@@ -28,8 +28,13 @@ clap = { workspace = true }
 rpc-router = { workspace = true }
 signal-hook = { workspace = true }
 maplit = { workspace = true }
-walkdir = { workspace = true }
-regex = { workspace = true }
+reqwest = { workspace = true }
+url = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+
+# Additional dependencies for knowledge graphs
+petgraph = "0.6"
 
 [dev-dependencies]
 tempfile = "3.0"
