@@ -1,15 +1,15 @@
 use anyhow::{anyhow, Result};
-use spider::website::Website;
-use spider::configuration::Configuration;
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use tracing::{info, warn, error, debug};
-use url::Url;
 use hashbrown::HashSet;
 use serde_json::Value;
+use spider::configuration::Configuration;
+use spider::website::Website;
+use std::collections::HashMap;
+use std::time::{Duration, Instant};
+use tracing::{debug, error, info, warn};
+use url::Url;
 
-use crate::{CrawlRequest, CrawlResult, ErrorPage};
 use crate::config::SpiderConfiguration;
+use crate::{CrawlRequest, CrawlResult, ErrorPage};
 
 pub struct SpiderCrawler {
     default_config: Configuration,
@@ -18,15 +18,14 @@ pub struct SpiderCrawler {
 impl SpiderCrawler {
     pub fn new() -> Result<Self> {
         let mut config = Configuration::new();
-        
+
         // Set reasonable defaults
         config.respect_robots_txt = true;
         config.delay = 1000; // 1 second delay
-        config.concurrency = 10;
+        config.concurrency_limit = Some(10);
         config.subdomains = false;
         config.tld = false;
         config.cache = false;
-        config.use_cookies = false;
         config.redirect_limit = 5;
         config.accept_invalid_certs = false;
 
@@ -37,7 +36,7 @@ impl SpiderCrawler {
 
     pub async fn crawl(&self, request: CrawlRequest) -> Result<CrawlResult> {
         let start_time = Instant::now();
-        
+
         // Validate URL
         let base_url = Url::parse(&request.url)
             .map_err(|e| anyhow!("Invalid URL '{}': {}", request.url, e))?;
@@ -72,16 +71,18 @@ impl SpiderCrawler {
         }
 
         // Start crawling
-        info!("Crawling with depth: {:?}, concurrency: {}", 
-               request.depth.unwrap_or(2), 
-               request.concurrency.unwrap_or(10));
+        info!(
+            "Crawling with depth: {:?}, concurrency: {}",
+            request.depth.unwrap_or(2),
+            request.concurrency.unwrap_or(10)
+        );
 
         website.crawl().await;
 
         // Collect results
         let links = website.get_links();
         let pages = website.get_pages();
-        
+
         let mut urls = Vec::new();
         let mut pages_crawled = 0u32;
         let mut pages_failed = 0u32;
@@ -91,7 +92,7 @@ impl SpiderCrawler {
         // Process pages and collect URLs
         for page in pages {
             let page_url = page.get_url();
-            
+
             if page.get_html().is_empty() && page.get_status_code().unwrap_or(200) >= 400 {
                 pages_failed += 1;
                 error_pages.push(ErrorPage {
@@ -126,9 +127,14 @@ impl SpiderCrawler {
         };
 
         let duration = start_time.elapsed();
-        
-        info!("Crawl completed: {} URLs found, {} pages crawled, {} failed in {:?}",
-              urls.len(), pages_crawled, pages_failed, duration);
+
+        info!(
+            "Crawl completed: {} URLs found, {} pages crawled, {} failed in {:?}",
+            urls.len(),
+            pages_crawled,
+            pages_failed,
+            duration
+        );
 
         Ok(CrawlResult {
             urls,
@@ -136,7 +142,11 @@ impl SpiderCrawler {
             pages_failed,
             duration_ms: duration.as_millis() as u64,
             sitemap_urls,
-            error_pages: if error_pages.is_empty() { None } else { Some(error_pages) },
+            error_pages: if error_pages.is_empty() {
+                None
+            } else {
+                Some(error_pages)
+            },
         })
     }
 
@@ -196,7 +206,7 @@ impl SpiderCrawler {
         // This is a simplified sitemap extraction
         // In a real implementation, you'd parse the actual sitemap.xml
         let mut sitemap_urls = Vec::new();
-        
+
         // Try to get sitemap from the website
         let pages = website.get_pages();
         for page in pages {

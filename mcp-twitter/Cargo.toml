@@ -18,7 +18,7 @@ url = "2.5.4"
 dotenv = "0.15"
 
 [[bin]]
-name = "twitter"
+name = "mcp-twitter"
 path = "src/main.rs"
 
 [[example]]
