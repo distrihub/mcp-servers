@@ -1,0 +1,52 @@
+[package]
+name = "mcp-spider"
+description = "MCP server for web crawling and scraping using spider-rs with comprehensive feature support"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "mcp-spider"
+path = "src/main.rs"
+
+[lib]
+name = "mcp_spider"
+path = "src/lib.rs"
+
+[dependencies]
+# Workspace dependencies
+async-mcp = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+clap = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+url = { workspace = true }
+
+# Spider-rs and related dependencies
+spider = { version = "1.99", features = [
+    "serde"
+] }
+
+# Additional dependencies for enhanced functionality
+regex = "1.0"
+scraper = "0.17"
+hashbrown = { version = "0.12", features = ["serde"] }
+
+[dev-dependencies]
+tempfile = "3.0"
+tokio-test = "0.4"
+
+[features]
+default = ["chrome", "screenshots"]
+chrome = ["spider/chrome"]
+screenshots = ["spider/chrome_screenshot"]
+stealth = ["spider/chrome_stealth"]
+headless = ["spider/chrome_headless_new"]

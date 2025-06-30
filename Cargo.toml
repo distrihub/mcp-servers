@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["mcp-coder", "mcp-twitter"]
+members = ["mcp-coder", "mcp-twitter", "mcp-spider"]
 
 [workspace.dependencies]
 # MCP and async dependencies
