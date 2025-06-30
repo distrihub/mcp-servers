@@ -5,7 +5,7 @@ use tracing::{info, error};
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
 #[derive(Parser)]
-#[command(name = "mcp-coder-rs")]
+#[command(name = "mcp-coder")]
 #[command(about = "MCP server for code analysis, formatting, and development tools")]
 #[command(version)]
 struct Cli {

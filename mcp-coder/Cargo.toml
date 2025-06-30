@@ -1,5 +1,5 @@
 [package]
-name = "mcp-coder-rs"
+name = "mcp-coder"
 description = "MCP server for code analysis, formatting, and development tools"
 version.workspace = true
 edition.workspace = true
@@ -8,7 +8,7 @@ authors.workspace = true
 repository.workspace = true
 
 [[bin]]
-name = "mcp-coder-rs"
+name = "mcp-coder"
 path = "src/main.rs"
 
 [lib]

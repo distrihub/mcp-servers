@@ -6,8 +6,8 @@ A collection of MCP (Model Context Protocol) server implementations in Rust, spe
 
 This workspace contains two MCP server implementations:
 
-- **mcp-coder-rs**: File system operations, code reading/writing, and project structure analysis
-- **mcp-twitter-rs**: Twitter/X API integration for posting tweets, searching, and user analytics
+- **mcp-coder**: File system operations, code reading/writing, and project structure analysis
+- **mcp-twitter**: Twitter/X API integration for posting tweets, searching, and user analytics
 
 ## Prerequisites
 
@@ -20,37 +20,37 @@ This workspace contains two MCP server implementations:
 
 ```bash
 # Clone the repository
-git clone https://github.com/distrihub/mcp-servers-rs
-cd mcp-servers-rs
+git clone https://github.com/distrihub/mcp-servers
+cd mcp-servers
 
 # Build all servers
 cargo build --release
 
 # Or build individual servers
-cargo build --release --bin mcp-coder-rs
-cargo build --release --bin mcp-twitter-rs
+cargo build --release --bin mcp-coder
+cargo build --release --bin mcp-twitter
 ```
 
 ## Usage with STDIO
 
 Both servers are designed to work with the Model Context Protocol over STDIO, making them compatible with MCP clients like Claude Desktop, VS Code extensions, and the distri framework.
 
-### mcp-coder-rs
+### mcp-coder
 
 The coder server provides file system operations and basic code analysis.
 
 ```bash
 # Start the server (default: stdio mode)
-./target/release/mcp-coder-rs
+./target/release/mcp-coder
 
 # Specify a base directory
-./target/release/mcp-coder-rs --directory /path/to/project
+./target/release/mcp-coder --directory /path/to/project
 
 # Show configuration
-./target/release/mcp-coder-rs config
+./target/release/mcp-coder config
 
 # Enable debug logging
-./target/release/mcp-coder-rs --debug serve
+./target/release/mcp-coder --debug serve
 ```
 
 #### Available Tools
@@ -66,7 +66,7 @@ The coder server provides file system operations and basic code analysis.
 - `file://{path}`: Access file content directly
 - `directory://{path}`: Access directory listings
 
-### mcp-twitter-rs
+### mcp-twitter
 
 The Twitter server provides integration with Twitter/X API v2.
 
@@ -79,19 +79,19 @@ export TWITTER_ACCESS_TOKEN="your_access_token"          # Optional, for posting
 export TWITTER_ACCESS_TOKEN_SECRET="your_token_secret"   # Optional, for posting
 
 # Start the server
-./target/release/mcp-twitter-rs
+./target/release/mcp-twitter
 
 # Or provide credentials via CLI
-./target/release/mcp-twitter-rs \
+./target/release/mcp-twitter \
   --api-key "your_key" \
   --api-secret "your_secret" \
   --bearer-token "your_bearer_token"
 
 # Test the connection
-./target/release/mcp-twitter-rs test
+./target/release/mcp-twitter test
 
 # Show configuration
-./target/release/mcp-twitter-rs config
+./target/release/mcp-twitter config
 ```
 
 #### Available Tools
@@ -118,11 +118,11 @@ Add to your Claude Desktop configuration:
 {
   "mcpServers": {
     "coder": {
-      "command": "/path/to/mcp-servers-rs/target/release/mcp-coder-rs",
+      "command": "/path/to/mcp-servers/target/release/mcp-coder",
       "args": ["--directory", "/path/to/your/project"]
     },
     "twitter": {
-      "command": "/path/to/mcp-servers-rs/target/release/mcp-twitter-rs",
+      "command": "/path/to/mcp-servers/target/release/mcp-twitter",
       "env": {
         "TWITTER_API_KEY": "your_key",
         "TWITTER_API_SECRET": "your_secret",
@@ -150,10 +150,10 @@ These servers are specifically designed to work with the [distri framework](http
    # distri-config.yaml
    mcp_servers:
      - name: coder
-       command: mcp-coder-rs
+       command: mcp-coder
        args: ["--directory", "{{workspace}}"]
      - name: twitter
-       command: mcp-twitter-rs
+       command: mcp-twitter
        env:
          TWITTER_BEARER_TOKEN: "{{secrets.twitter_bearer}}"
    ```
@@ -182,16 +182,16 @@ These servers are specifically designed to work with the [distri framework](http
 ### Project Structure
 
 ```
-mcp-servers-rs/
+mcp-servers/
 ├── Cargo.toml                 # Workspace configuration
 ├── .gitignore                 # Git ignore rules
 ├── README.md                  # This file
-├── mcp-coder-rs/             # File operations MCP server
+├── mcp-coder/                # File operations MCP server
 │   ├── Cargo.toml
 │   └── src/
 │       ├── main.rs           # CLI entry point
 │       └── lib.rs            # Core implementation
-└── mcp-twitter-rs/           # Twitter integration MCP server
+└── mcp-twitter/              # Twitter integration MCP server
     ├── Cargo.toml
     └── src/
         ├── main.rs           # CLI entry point
@@ -208,8 +208,8 @@ mcp-servers-rs/
 cargo test
 
 # Run tests for specific server
-cargo test --package mcp-coder-rs
-cargo test --package mcp-twitter-rs
+cargo test --package mcp-coder
+cargo test --package mcp-twitter
 
 # Run with output
 cargo test -- --nocapture
@@ -235,10 +235,10 @@ Both servers support the MCP debugging tools recommended by the [Model Context P
 npm install -g @modelcontextprotocol/inspector
 
 # Debug the coder server
-npx @modelcontextprotocol/inspector ./target/release/mcp-coder-rs
+npx @modelcontextprotocol/inspector ./target/release/mcp-coder
 
 # Debug the twitter server
-npx @modelcontextprotocol/inspector ./target/release/mcp-twitter-rs
+npx @modelcontextprotocol/inspector ./target/release/mcp-twitter
 ```
 
 ### Manual Testing with stdio
@@ -247,13 +247,13 @@ You can manually test the servers by sending JSON-RPC messages:
 
 ```bash
 # Start server in debug mode
-./target/release/mcp-coder-rs --debug
+./target/release/mcp-coder --debug
 
 # Send initialization message
-echo '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "test", "version": "1.0"}}}' | ./target/release/mcp-coder-rs
+echo '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "test", "version": "1.0"}}}' | ./target/release/mcp-coder
 
 # List available tools
-echo '{"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}' | ./target/release/mcp-coder-rs
+echo '{"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}' | ./target/release/mcp-coder
 ```
 
 ## API Credentials
@@ -291,8 +291,8 @@ export TWITTER_ACCESS_TOKEN_SECRET="your_access_token_secret"
 Both servers support debug logging:
 
 ```bash
-./target/release/mcp-coder-rs --debug
-./target/release/mcp-twitter-rs --debug
+./target/release/mcp-coder --debug
+./target/release/mcp-twitter --debug
 ```
 
 ### Logging
@@ -300,7 +300,7 @@ Both servers support debug logging:
 The servers use the `tracing` crate for logging. Set the `RUST_LOG` environment variable for more detailed logs:
 
 ```bash
-RUST_LOG=debug ./target/release/mcp-coder-rs
+RUST_LOG=debug ./target/release/mcp-coder
 ```
 
 ## License

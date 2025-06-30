@@ -35,5 +35,5 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 authors = ["Distri Bot"]
-repository = "https://github.com/distrihub/mcp-servers-rs"
+repository = "https://github.com/distrihub/mcp-servers"
 description = "A collection of MCP (Model Context Protocol) server implementations in Rust"

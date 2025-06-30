@@ -5,7 +5,7 @@ use tracing::{info, error};
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
 #[derive(Parser)]
-#[command(name = "mcp-twitter-rs")]
+#[command(name = "mcp-twitter")]
 #[command(about = "MCP server for Twitter/X integration with posting, searching, and analytics")]
 #[command(version)]
 struct Cli {

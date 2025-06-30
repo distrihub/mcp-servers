@@ -1,5 +1,5 @@
 [package]
-name = "mcp-twitter-rs"
+name = "mcp-twitter"
 description = "MCP server for Twitter/X integration with posting, searching, and analytics"
 version.workspace = true
 edition.workspace = true
@@ -8,7 +8,7 @@ authors.workspace = true
 repository.workspace = true
 
 [[bin]]
-name = "mcp-twitter-rs"
+name = "mcp-twitter"
 path = "src/main.rs"
 
 [lib]
