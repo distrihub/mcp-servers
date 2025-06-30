@@ -12,7 +12,7 @@ This workspace contains multiple MCP server implementations, each providing spec
 | --------------- | ------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------------- |
 | **mcp-coder**   | ✅ Active           | File system operations, code analysis & formatting | `read_file`, `write_file`, `search_files`, `list_directory`, `get_project_structure`       | `file://{path}`, `directory://{path}`                                        | Code development, file management, project analysis |
 | **mcp-twitter** | ✅ Active           | Twitter/X API integration                          | `post_tweet`, `search_tweets`, `get_user_info`, `get_user_timeline`, `get_tweet_analytics` | `twitter://user/{id}`, `twitter://tweet/{id}`, `twitter://trends/{location}` | Social media automation, content posting, analytics |
-| **mcp-spider**  | 🔧 Work in Progress | Advanced web crawling with spider-rs               | `crawl`, `scrape`                                                                          | `spider://crawl/{url}`, `spider://scrape/{url}`                              | Web data extraction, site mapping, content analysis |
+| **mcp-spider**  | ✅ Working          | Advanced web crawling with spider-rs               | `crawl`, `scrape`                                                                          | `spider://crawl/{url}`, `spider://scrape/{url}`                              | Web data extraction, site mapping, content analysis |
 
 | **mcp-tavily** | 🔧 Work in Progress | Tavily search API integration | `search`, `search_news`, `get_extract` | `tavily://search/{query}` | AI-powered web search, news aggregation |
 
@@ -36,8 +36,8 @@ This workspace contains multiple MCP server implementations, each providing spec
 #### 🔹 mcp-spider
 **Purpose**: Comprehensive web crawling capabilities
 - **Port**: 3002 (HTTP mode)  
-- **Key Features**: JavaScript rendering, screenshot capture, stealth mode, sitemap support
-- **Chrome Integration**: Optional Chrome browser support for advanced features
+- **Key Features**: Website crawling, content extraction, link discovery, robots.txt respect
+- **Spider Integration**: Fast and reliable web crawling using spider-rs engine
 - **Scalability**: High-performance concurrent crawling
 
 #### 🔹 mcp-crawler
@@ -66,7 +66,7 @@ This workspace contains multiple MCP server implementations, each providing spec
 - OpenSSL development libraries (`libssl-dev` on Ubuntu/Debian)
 - For mcp-twitter: Twitter API credentials
 - For mcp-tavily: Tavily API key
-- For mcp-spider: Optional Chrome browser for advanced features
+- All MCP servers use async-mcp for protocol communication
 
 ## Installation
 
@@ -139,11 +139,11 @@ The spider server provides advanced web crawling capabilities.
 # Start the server
 ./target/release/mcp-spider
 
-# Test crawling
-./target/release/mcp-spider test --url https://example.com
+# Start with debug logging
+./target/release/mcp-spider --debug
 
-# Enable stealth mode and screenshots
-./target/release/mcp-spider --stealth-mode --enable-cache serve
+# With custom options
+./target/release/mcp-spider --user-agent "MyBot/1.0" --delay 2.0 --max-depth 3
 ```
 
 ### mcp-crawler
@@ -214,7 +214,7 @@ Add to your Claude Desktop configuration:
     },
     "spider": {
       "command": "/path/to/mcp-servers/target/release/mcp-spider",
-      "args": ["--stealth-mode"]
+              "args": ["--debug"]
     },
     "crawler": {
       "command": "/path/to/mcp-servers/target/release/mcp-crawler"
@@ -258,7 +258,7 @@ These servers are specifically designed to work with the [distri framework](http
          TWITTER_BEARER_TOKEN: "{{secrets.twitter_bearer}}"
      - name: spider
        command: mcp-spider
-       args: ["--stealth-mode"]
+       args: ["--debug"]
      - name: tavily
        command: mcp-tavily
        env:
@@ -416,7 +416,7 @@ echo '{"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}' | ./tar
 
 1. **Permission denied errors**: Ensure the servers have read/write permissions for specified directories
 2. **Twitter API errors**: Check API credentials and rate limits
-3. **Chrome not found**: Install Chrome or specify path with `--chrome-path`
+3. **Spider crawling errors**: Check robots.txt compliance and rate limiting
 4. **STDIO communication issues**: Verify JSON-RPC message formatting
 5. **OpenSSL errors**: Install development libraries (`sudo apt install libssl-dev pkg-config`)
 
@@ -449,7 +449,7 @@ Check server status and capabilities:
 # Check configuration and available tools
 ./target/release/mcp-coder config
 ./target/release/mcp-twitter config
-./target/release/mcp-spider info
+./target/release/mcp-spider --help
 ./target/release/mcp-crawler config
 ./target/release/mcp-tavily config
 ./target/release/mcp-kg config
