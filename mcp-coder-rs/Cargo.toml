@@ -1,0 +1,48 @@
+[package]
+name = "mcp-coder-rs"
+description = "MCP server for code analysis, formatting, and development tools"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "mcp-coder-rs"
+path = "src/main.rs"
+
+[lib]
+name = "mcp_coder"
+path = "src/lib.rs"
+
+[dependencies]
+# Workspace dependencies
+async-mcp = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+clap = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+walkdir = { workspace = true }
+regex = { workspace = true }
+
+# Additional dependencies for code analysis
+syn = { version = "2.0", features = ["full"] }
+quote = "1.0"
+rustfmt-wrapper = "0.2"
+tree-sitter = "0.20"
+tree-sitter-rust = "0.20"
+tree-sitter-javascript = "0.20"
+tree-sitter-python = "0.20"
+
+[build-dependencies]
+cc = "1.0"
+
+[dev-dependencies]
+tempfile = "3.0"
+tokio-test = "0.4"
