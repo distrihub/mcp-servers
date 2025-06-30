@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    "mcp-coder-rs",
-    "mcp-twitter-rs"
+    "mcp-coder",
+    "mcp-twitter"
 ]
 
 [workspace.dependencies]
