@@ -38,13 +38,13 @@ pub fn build<T: Transport>(t: T) -> Result<Server<T>> {
 }
 
 fn list_resources() -> ResourcesListResponse {
-    let base = Url::parse("https://spider.local/").unwrap();
+    let base = Url::parse("https://distribot.local/").unwrap();
     let resources = ["crawl", "scrape"]
         .iter()
         .map(|r| Resource {
             uri: base.join(r).unwrap(),
             name: r.to_string(),
-            description: Some(format!("Spider {} results", r)),
+            description: Some(format!("DistriBot {} results", r)),
             mime_type: Some("application/json".to_string()),
         })
         .collect();
