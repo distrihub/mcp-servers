@@ -14,6 +14,7 @@ This workspace contains multiple MCP server implementations, each providing spec
 | **mcp-coder**   | 🔧 Work in Progress | File system operations, code analysis & formatting | `read_file`, `write_file`, `search_files`, `list_directory`, `get_project_structure`       | `file://{path}`, `directory://{path}`                                        | Code development, file management, project analysis |
 | **mcp-twitter** | 🔧 Work in Progress | Twitter/X API integration                          | `post_tweet`, `search_tweets`, `get_user_info`, `get_user_timeline`, `get_tweet_analytics` | `twitter://user/{id}`, `twitter://tweet/{id}`, `twitter://trends/{location}` | Social media automation, content posting, analytics |
 | **mcp-spider**  | 🔧 Work in Progress | Advanced web crawling with spider-rs               | `scrape`                                                                                   | `spider://scrape/{url}`                                                      | Web data extraction, site mapping, content analysis |
+| **mcp-reddit**  | 🔧 Work in Progress | Reddit API integration                             | `get_posts`, `search_posts`, `get_comments`, `get_subreddit_info`, `get_user_info`, `get_trending_subreddits`, `get_user_posts`, `get_user_comments` | `reddit://posts`, `reddit://comments`, `reddit://subreddits`, `reddit://users` | Social media monitoring, content analysis, community insights |
 
 
 
@@ -37,6 +38,7 @@ cargo build --release --bin mcp-coder
 cargo build --release --bin mcp-twitter
 cargo build --release --bin mcp-spider
 cargo build --release --bin mcp-tavily
+cargo build --release --bin mcp-reddit
 ```
 
 
@@ -73,6 +75,14 @@ Add to your Claude Desktop configuration:
       "command": "/path/to/mcp-servers/target/release/mcp-tavily",
       "env": {
         "TAVILY_API_KEY": "your_api_key"
+      }
+    },
+    "reddit": {
+      "command": "/path/to/mcp-servers/target/release/mcp-reddit",
+      "env": {
+        "REDDIT_CLIENT_ID": "your_client_id",
+        "REDDIT_CLIENT_SECRET": "your_client_secret",
+        "REDDIT_USER_AGENT": "YourAppName/1.0 (by /u/YourUsername)"
       }
     },
     "kg": {
@@ -113,6 +123,12 @@ These servers are specifically designed to work with the [distri framework](http
        command: mcp-tavily
        env:
          TAVILY_API_KEY: "{{secrets.tavily_key}}"
+     - name: reddit
+       command: mcp-reddit
+       env:
+         REDDIT_CLIENT_ID: "{{secrets.reddit_client_id}}"
+         REDDIT_CLIENT_SECRET: "{{secrets.reddit_client_secret}}"
+         REDDIT_USER_AGENT: "MCP-Reddit-Server/1.0"
      - name: kg
        command: mcp-kg
        args: ["--data-path", "{{workspace}}/knowledge_graph"]
@@ -142,6 +158,7 @@ npx @modelcontextprotocol/inspector ./target/release/mcp-coder
 npx @modelcontextprotocol/inspector ./target/release/mcp-twitter
 npx @modelcontextprotocol/inspector ./target/release/mcp-spider
 npx @modelcontextprotocol/inspector ./target/release/mcp-tavily
+npx @modelcontextprotocol/inspector ./target/release/mcp-reddit
 
 ```
 

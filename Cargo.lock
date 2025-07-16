@@ -1840,6 +1840,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "mcp-reddit"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-mcp",
+ "chrono",
+ "reqwest 0.12.20",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
 name = "mcp-spider"
 version = "0.1.0"
 dependencies = [
