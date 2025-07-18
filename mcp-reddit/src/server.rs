@@ -24,19 +24,19 @@ struct RedditToken {
     scope: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct RedditListing<T> {
     data: RedditListingData<T>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct RedditListingData<T> {
     children: Vec<RedditChild<T>>,
     after: Option<String>,
     before: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct RedditChild<T> {
     data: T,
 }
@@ -152,11 +152,11 @@ impl RedditClient {
             .map_err(|_| anyhow::anyhow!("REDDIT_CLIENT_ID not found in environment"))?;
         let client_secret = env::var("REDDIT_CLIENT_SECRET")
             .map_err(|_| anyhow::anyhow!("REDDIT_CLIENT_SECRET not found in environment"))?;
-        let user_agent = env::var("REDDIT_USER_AGENT")
-            .unwrap_or_else(|_| "MCP-Reddit-Server/1.0".to_string());
+        let user_agent =
+            env::var("REDDIT_USER_AGENT").unwrap_or_else(|_| "MCP-Reddit-Server/1.0".to_string());
 
         let client = Client::new();
-        
+
         // Get access token using client credentials flow
         let token_response = client
             .post(REDDIT_OAUTH_URL)
@@ -176,7 +176,7 @@ impl RedditClient {
 
     async fn get_posts(&self, subreddit: &str, sort: &str, limit: i32) -> Result<Vec<RedditPost>> {
         let url = format!("{}/r/{}/{}", REDDIT_API_BASE, subreddit, sort);
-        
+
         let response = self
             .client
             .get(&url)
@@ -188,16 +188,27 @@ impl RedditClient {
             .json::<RedditListing<RedditPost>>()
             .await?;
 
-        Ok(response.data.children.into_iter().map(|child| child.data).collect())
+        Ok(response
+            .data
+            .children
+            .into_iter()
+            .map(|child| child.data)
+            .collect())
     }
 
-    async fn search_posts(&self, query: &str, subreddit: Option<&str>, sort: &str, limit: i32) -> Result<Vec<RedditPost>> {
+    async fn search_posts(
+        &self,
+        query: &str,
+        subreddit: Option<&str>,
+        sort: &str,
+        limit: i32,
+    ) -> Result<Vec<RedditPost>> {
         let url = if let Some(sub) = subreddit {
             format!("{}/r/{}/search", REDDIT_API_BASE, sub)
         } else {
             format!("{}/search", REDDIT_API_BASE)
         };
-        
+
         let query_params = vec![
             ("q", query.to_string()),
             ("sort", sort.to_string()),
@@ -216,12 +227,17 @@ impl RedditClient {
             .json::<RedditListing<RedditPost>>()
             .await?;
 
-        Ok(response.data.children.into_iter().map(|child| child.data).collect())
+        Ok(response
+            .data
+            .children
+            .into_iter()
+            .map(|child| child.data)
+            .collect())
     }
 
     async fn get_comments(&self, post_id: &str, limit: i32) -> Result<Vec<RedditComment>> {
         let url = format!("{}/comments/{}", REDDIT_API_BASE, post_id);
-        
+
         let response = self
             .client
             .get(&url)
@@ -235,7 +251,12 @@ impl RedditClient {
 
         // The first element is the post, second is comments
         if response.len() > 1 {
-            Ok(response[1].data.children.iter().map(|child| child.data.clone()).collect())
+            Ok(response[1]
+                .data
+                .children
+                .iter()
+                .map(|child| child.data.clone())
+                .collect())
         } else {
             Ok(vec![])
         }
@@ -243,7 +264,7 @@ impl RedditClient {
 
     async fn get_subreddit_info(&self, subreddit: &str) -> Result<RedditSubreddit> {
         let url = format!("{}/r/{}/about", REDDIT_API_BASE, subreddit);
-        
+
         let response = self
             .client
             .get(&url)
@@ -259,7 +280,7 @@ impl RedditClient {
 
     async fn get_user_info(&self, username: &str) -> Result<RedditUser> {
         let url = format!("{}/user/{}/about", REDDIT_API_BASE, username);
-        
+
         let response = self
             .client
             .get(&url)
@@ -275,7 +296,7 @@ impl RedditClient {
 
     async fn get_trending_subreddits(&self, limit: i32) -> Result<Vec<RedditSubreddit>> {
         let url = format!("{}/subreddits/popular", REDDIT_API_BASE);
-        
+
         let response = self
             .client
             .get(&url)
@@ -287,12 +308,17 @@ impl RedditClient {
             .json::<RedditListing<RedditSubreddit>>()
             .await?;
 
-        Ok(response.data.children.into_iter().map(|child| child.data).collect())
+        Ok(response
+            .data
+            .children
+            .into_iter()
+            .map(|child| child.data)
+            .collect())
     }
 
     async fn get_user_posts(&self, username: &str, limit: i32) -> Result<Vec<RedditPost>> {
         let url = format!("{}/user/{}/submitted", REDDIT_API_BASE, username);
-        
+
         let response = self
             .client
             .get(&url)
@@ -304,12 +330,17 @@ impl RedditClient {
             .json::<RedditListing<RedditPost>>()
             .await?;
 
-        Ok(response.data.children.into_iter().map(|child| child.data).collect())
+        Ok(response
+            .data
+            .children
+            .into_iter()
+            .map(|child| child.data)
+            .collect())
     }
 
     async fn get_user_comments(&self, username: &str, limit: i32) -> Result<Vec<RedditComment>> {
         let url = format!("{}/user/{}/comments", REDDIT_API_BASE, username);
-        
+
         let response = self
             .client
             .get(&url)
@@ -321,7 +352,12 @@ impl RedditClient {
             .json::<RedditListing<RedditComment>>()
             .await?;
 
-        Ok(response.data.children.into_iter().map(|child| child.data).collect())
+        Ok(response
+            .data
+            .children
+            .into_iter()
+            .map(|child| child.data)
+            .collect())
     }
 }
 
@@ -583,7 +619,10 @@ fn register_tools<T: Transport>(server: &mut ServerBuilder<T>) -> Result<()> {
                 let client = RedditClient::new().await?;
                 let query = args["query"].as_str().context("query is missing")?;
                 let subreddit = args.get("subreddit").and_then(|v| v.as_str());
-                let sort = args.get("sort").and_then(|v| v.as_str()).unwrap_or("relevance");
+                let sort = args
+                    .get("sort")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("relevance");
                 let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(25) as i32;
 
                 let posts = client.search_posts(query, subreddit, sort, limit).await?;
