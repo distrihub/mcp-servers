@@ -1755,11 +1755,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-mcp",
- "base64 0.21.7",
  "chrono",
  "clap",
- "dotenv",
- "mime",
  "regex",
  "serde",
  "serde_json",

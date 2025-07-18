@@ -29,19 +29,16 @@ clap = { workspace = true }
 url = { workspace = true }
 chrono = { workspace = true }
 
-# Spider-rs with stable features - using older compatible version
-spider = { version = "1.90", features = ["serde"] }
+# Spider-rs with stable version
+spider = { version = "1.99", features = ["serde"] }
 
 # Additional dependencies for enhanced functionality  
 regex = { workspace = true }
 uuid = { workspace = true }
-base64 = "0.21"
-mime = "0.3"
 
 [dev-dependencies]
 tempfile = "3.0"
 tokio-test = "0.4"
-dotenv = "0.15"
 
 [features]
 default = []
