@@ -1,9 +1,9 @@
 use anyhow::Result;
+use regex::Regex;
 use serde_json::{json, Value};
 use spider::website::Website;
 use std::collections::HashMap;
 use url::Url;
-use regex::Regex;
 
 pub struct SpiderSession {
     user_agent: Option<String>,
@@ -35,7 +35,7 @@ impl SpiderSession {
 
     pub async fn fetch_page(&self, url: &str) -> Result<String> {
         let mut website = Website::new(url);
-        
+
         if let Some(ua) = &self.user_agent {
             website.with_user_agent(Some(ua));
         }
@@ -60,13 +60,17 @@ impl SpiderSession {
         }
     }
 
-    pub async fn scrape_with_options(&self, url: &str, _options: ScrapingOptions) -> Result<ScrapingResult> {
+    pub async fn scrape_with_options(
+        &self,
+        url: &str,
+        _options: ScrapingOptions,
+    ) -> Result<ScrapingResult> {
         let html = self.fetch_page(url).await?;
-        
+
         // Create a simple mock page for the extractor
         let page = create_mock_page(url, &html);
         let extractor = ElementExtractor::new(&html, page);
-        
+
         let result = ScrapingResult {
             url: url.to_string(),
             html: html.clone(),
@@ -175,7 +179,7 @@ impl ElementExtractor {
             "title" => r"<title[^>]*>(.*?)</title>",
             _ => &format!(r"<{}\b[^>]*>(.*?)</{}>", selector, selector),
         };
-        
+
         let regex = Regex::new(pattern)?;
         let texts: Vec<String> = regex
             .captures_iter(&self.html)
@@ -186,25 +190,31 @@ impl ElementExtractor {
             })
             .filter(|text| !text.is_empty())
             .collect();
-        
+
         Ok(texts)
     }
 
     /// Extract attribute values from elements
     pub fn extract_attributes(&self, selector: &str, attribute: &str) -> Result<Vec<String>> {
         let pattern = if selector.contains("[") {
-            format!(r#"<{}\s+[^>]*{}=['"]([^'"]*?)['"][^>]*>"#, 
-                    selector.split('[').next().unwrap_or(selector), attribute)
+            format!(
+                r#"<{}\s+[^>]*{}=['"]([^'"]*?)['"][^>]*>"#,
+                selector.split('[').next().unwrap_or(selector),
+                attribute
+            )
         } else {
-            format!(r#"<{}\s+[^>]*{}=['"]([^'"]*?)['"][^>]*>"#, selector, attribute)
+            format!(
+                r#"<{}\s+[^>]*{}=['"]([^'"]*?)['"][^>]*>"#,
+                selector, attribute
+            )
         };
-        
+
         let regex = Regex::new(&pattern)?;
         let attributes: Vec<String> = regex
             .captures_iter(&self.html)
             .filter_map(|cap| cap.get(1).map(|m| m.as_str().to_string()))
             .collect();
-        
+
         Ok(attributes)
     }
 
@@ -215,8 +225,11 @@ impl ElementExtractor {
             .captures_iter(&self.html)
             .map(|cap| {
                 let href = cap.get(1).map(|m| m.as_str()).unwrap_or("");
-                let text = cap.get(2).map(|m| strip_html_tags(m.as_str())).unwrap_or_default();
-                
+                let text = cap
+                    .get(2)
+                    .map(|m| strip_html_tags(m.as_str()))
+                    .unwrap_or_default();
+
                 json!({
                     "tag": "a",
                     "href": href,
@@ -225,7 +238,7 @@ impl ElementExtractor {
                 })
             })
             .collect();
-        
+
         Ok(links)
     }
 
@@ -237,14 +250,14 @@ impl ElementExtractor {
             .map(|cap| {
                 let src = cap.get(1).map(|m| m.as_str()).unwrap_or("");
                 let other_attrs = cap.get(2).map(|m| m.as_str()).unwrap_or("");
-                
+
                 let alt_regex = Regex::new(r#"alt=['"]([^'"]*?)['"]"#).unwrap();
                 let alt = alt_regex
                     .captures(other_attrs)
                     .and_then(|c| c.get(1))
                     .map(|m| m.as_str())
                     .unwrap_or("");
-                
+
                 json!({
                     "tag": "img",
                     "src": src,
@@ -253,7 +266,7 @@ impl ElementExtractor {
                 })
             })
             .collect();
-        
+
         Ok(images)
     }
 
@@ -261,21 +274,21 @@ impl ElementExtractor {
     pub fn extract_forms(&self) -> Result<Vec<Value>> {
         let form_regex = Regex::new(r"(?s)<form\s+([^>]*?)>(.*?)</form>")?;
         let input_regex = Regex::new(r#"<(?:input|select|textarea)\s+([^>]*?)/?>"#)?;
-        
+
         let forms: Vec<Value> = form_regex
             .captures_iter(&self.html)
             .map(|form_cap| {
                 let form_attrs = form_cap.get(1).map(|m| m.as_str()).unwrap_or("");
                 let form_content = form_cap.get(2).map(|m| m.as_str()).unwrap_or("");
-                
+
                 let action = extract_attr_value(form_attrs, "action").unwrap_or_default();
                 let method = extract_attr_value(form_attrs, "method").unwrap_or("GET".to_string());
-                
+
                 let fields: Vec<Value> = input_regex
                     .captures_iter(form_content)
                     .map(|input_cap| {
                         let input_attrs = input_cap.get(1).map(|m| m.as_str()).unwrap_or("");
-                        
+
                         json!({
                             "name": extract_attr_value(input_attrs, "name"),
                             "type": extract_attr_value(input_attrs, "type"),
@@ -285,7 +298,7 @@ impl ElementExtractor {
                         })
                     })
                     .collect();
-                
+
                 json!({
                     "action": self.resolve_url(&action),
                     "method": method.to_uppercase(),
@@ -293,7 +306,7 @@ impl ElementExtractor {
                 })
             })
             .collect();
-        
+
         Ok(forms)
     }
 
@@ -302,17 +315,17 @@ impl ElementExtractor {
         let table_regex = Regex::new(r"(?s)<table\s*[^>]*>(.*?)</table>")?;
         let row_regex = Regex::new(r"(?s)<tr\s*[^>]*>(.*?)</tr>")?;
         let cell_regex = Regex::new(r"(?s)<t[hd]\s*[^>]*>(.*?)</t[hd]>")?;
-        
+
         let tables: Vec<Value> = table_regex
             .captures_iter(&self.html)
             .map(|table_cap| {
                 let table_content = table_cap.get(1).map(|m| m.as_str()).unwrap_or("");
-                
+
                 let rows: Vec<Vec<String>> = row_regex
                     .captures_iter(table_content)
                     .map(|row_cap| {
                         let row_content = row_cap.get(1).map(|m| m.as_str()).unwrap_or("");
-                        
+
                         cell_regex
                             .captures_iter(row_content)
                             .map(|cell_cap| {
@@ -321,43 +334,62 @@ impl ElementExtractor {
                             .collect()
                     })
                     .collect();
-                
+
                 let headers = rows.first().cloned().unwrap_or_default();
-                let data_rows = if rows.len() > 1 { 
-                    rows[1..].to_vec() 
-                } else { 
-                    vec![] 
+                let data_rows = if rows.len() > 1 {
+                    rows[1..].to_vec()
+                } else {
+                    vec![]
                 };
-                
+
                 json!({
                     "headers": headers,
                     "rows": data_rows
                 })
             })
             .collect();
-        
+
         Ok(tables)
     }
 
     /// Extract metadata from the page
     pub fn extract_metadata(&self) -> Result<Value> {
-        let title = self.extract_text("title")?.first().cloned().unwrap_or_default();
-        
-        let description = self.extract_attributes("meta[name='description']", "content")?
-            .first().cloned().unwrap_or_default();
-            
-        let keywords = self.extract_attributes("meta[name='keywords']", "content")?
-            .first().cloned().unwrap_or_default();
-        
-        let og_title = self.extract_attributes("meta[property='og:title']", "content")?
-            .first().cloned().unwrap_or_default();
-            
-        let og_description = self.extract_attributes("meta[property='og:description']", "content")?
-            .first().cloned().unwrap_or_default();
-            
-        let og_image = self.extract_attributes("meta[property='og:image']", "content")?
-            .first().cloned().unwrap_or_default();
-        
+        let title = self
+            .extract_text("title")?
+            .first()
+            .cloned()
+            .unwrap_or_default();
+
+        let description = self
+            .extract_attributes("meta[name='description']", "content")?
+            .first()
+            .cloned()
+            .unwrap_or_default();
+
+        let keywords = self
+            .extract_attributes("meta[name='keywords']", "content")?
+            .first()
+            .cloned()
+            .unwrap_or_default();
+
+        let og_title = self
+            .extract_attributes("meta[property='og:title']", "content")?
+            .first()
+            .cloned()
+            .unwrap_or_default();
+
+        let og_description = self
+            .extract_attributes("meta[property='og:description']", "content")?
+            .first()
+            .cloned()
+            .unwrap_or_default();
+
+        let og_image = self
+            .extract_attributes("meta[property='og:image']", "content")?
+            .first()
+            .cloned()
+            .unwrap_or_default();
+
         Ok(json!({
             "title": title,
             "description": description,
@@ -374,20 +406,21 @@ impl ElementExtractor {
     pub fn search_patterns(&self, pattern: &str) -> Result<Vec<String>> {
         let regex = Regex::new(pattern)?;
         let text = strip_html_tags(&self.html);
-        
+
         let matches: Vec<String> = regex
             .find_iter(&text)
             .map(|m| m.as_str().to_string())
             .collect();
-        
+
         Ok(matches)
     }
 
     /// Extract structured data (JSON-LD, microdata)
     pub fn extract_structured_data(&self) -> Result<Vec<Value>> {
         let mut structured_data = Vec::new();
-        
-        let json_ld_regex = Regex::new(r#"(?s)<script\s+type=['"]application/ld\+json['"][^>]*>(.*?)</script>"#)?;
+
+        let json_ld_regex =
+            Regex::new(r#"(?s)<script\s+type=['"]application/ld\+json['"][^>]*>(.*?)</script>"#)?;
         for cap in json_ld_regex.captures_iter(&self.html) {
             if let Some(json_text) = cap.get(1) {
                 if let Ok(data) = serde_json::from_str::<Value>(json_text.as_str()) {
@@ -398,7 +431,7 @@ impl ElementExtractor {
                 }
             }
         }
-        
+
         let microdata_regex = Regex::new(r#"<[^>]+itemscope[^>]*>"#)?;
         for _match in microdata_regex.find_iter(&self.html) {
             structured_data.push(json!({
@@ -406,7 +439,7 @@ impl ElementExtractor {
                 "data": "microdata_element_found"
             }));
         }
-        
+
         Ok(structured_data)
     }
 
@@ -414,13 +447,13 @@ impl ElementExtractor {
         if relative_url.starts_with("http") {
             return relative_url.to_string();
         }
-        
+
         if let Ok(base_url) = Url::parse(&self.page.get_url()) {
             if let Ok(resolved) = base_url.join(relative_url) {
                 return resolved.to_string();
             }
         }
-        
+
         relative_url.to_string()
     }
 }
@@ -439,17 +472,26 @@ impl WebAutomation {
 
     pub async fn click_element(&self, url: &str, selector: &str) -> Result<String> {
         let _html = self.session.fetch_page(url).await?;
-        Ok(format!("Clicked element with selector: {} (simulated)", selector))
+        Ok(format!(
+            "Clicked element with selector: {} (simulated)",
+            selector
+        ))
     }
 
     pub async fn fill_form(&self, url: &str, form_data: HashMap<String, String>) -> Result<String> {
         let _html = self.session.fetch_page(url).await?;
-        Ok(format!("Filled form with data: {:?} (simulated)", form_data))
+        Ok(format!(
+            "Filled form with data: {:?} (simulated)",
+            form_data
+        ))
     }
 
     pub async fn submit_form(&self, url: &str, form_selector: &str) -> Result<String> {
         let _html = self.session.fetch_page(url).await?;
-        Ok(format!("Submitted form with selector: {} (simulated)", form_selector))
+        Ok(format!(
+            "Submitted form with selector: {} (simulated)",
+            form_selector
+        ))
     }
 
     pub async fn take_screenshot(&self, url: &str, _selector: Option<&str>) -> Result<Vec<u8>> {
@@ -457,7 +499,12 @@ impl WebAutomation {
         Ok(vec![]) // Placeholder
     }
 
-    pub async fn wait_for_element(&self, url: &str, _selector: &str, _timeout_ms: u64) -> Result<bool> {
+    pub async fn wait_for_element(
+        &self,
+        url: &str,
+        _selector: &str,
+        _timeout_ms: u64,
+    ) -> Result<bool> {
         let _html = self.session.fetch_page(url).await?;
         Ok(true) // Placeholder
     }
@@ -475,40 +522,43 @@ impl XPathAlternative {
     /// Convert common XPath expressions to CSS selectors
     pub fn xpath_to_css(xpath: &str) -> Result<String> {
         let mut css = xpath.to_string();
-        
+
         if css.starts_with("//") {
             css = css.replace("//", "");
         } else if css.starts_with("/") {
             css = css.trim_start_matches('/').replace("/", " > ");
         }
-        
+
         if css.contains("[@") {
             css = css.replace("[@", "[");
         }
-        
+
         if css.contains("[") && !css.contains("=") {
             let re = Regex::new(r"\[(\d+)\]")?;
             css = re.replace_all(&css, ":nth-child($1)").to_string();
         }
-        
+
         Ok(css)
     }
 
     /// Get XPath alternatives for common use cases
     pub fn common_patterns() -> HashMap<&'static str, &'static str> {
         let mut patterns = HashMap::new();
-        
+
         patterns.insert("//div", "div");
         patterns.insert("//a[@href]", "a[href]");
         patterns.insert("//img[@src]", "img[src]");
         patterns.insert("//input[@type='text']", "input[type='text']");
-        patterns.insert("//span[contains(@class, 'highlight')]", "span[class*='highlight']");
+        patterns.insert(
+            "//span[contains(@class, 'highlight')]",
+            "span[class*='highlight']",
+        );
         patterns.insert("//div[@id='content']", "div#content");
         patterns.insert("//p[1]", "p:first-child");
         patterns.insert("//li[last()]", "li:last-child");
         patterns.insert("//table//tr", "table tr");
         patterns.insert("//form//input", "form input");
-        
+
         patterns
     }
 }
@@ -522,7 +572,8 @@ fn strip_html_tags(html: &str) -> String {
 fn extract_attr_value(attrs: &str, attr_name: &str) -> Option<String> {
     let pattern = format!(r#"{}=['"]([^'"]*?)['"]"#, attr_name);
     let regex = Regex::new(&pattern).ok()?;
-    regex.captures(attrs)
+    regex
+        .captures(attrs)
         .and_then(|cap| cap.get(1))
         .map(|m| m.as_str().to_string())
 }

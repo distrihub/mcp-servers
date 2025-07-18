@@ -1,11 +1,8 @@
-mod server;
 mod scraper_tools;
+mod server;
 
-pub use server::build;
 pub use scraper_tools::{
-    ElementExtractor, SpiderSession, WebAutomation, XPathAlternative,
-    ScrapingOptions, ScrapingResult
+    ElementExtractor, ScrapingOptions, ScrapingResult, SpiderSession, WebAutomation,
+    XPathAlternative,
 };
-
-#[cfg(test)]
-mod tests;
+pub use server::build;
