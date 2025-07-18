@@ -1,287 +1,281 @@
-# MCP Spider - Advanced Web Crawling & Scraping MCP Server
+# MCP Spider Server
 
-A comprehensive Model Context Protocol (MCP) server for web crawling and scraping built with Rust and the powerful [spider-rs](https://github.com/spider-rs/spider) library.
+An advanced Model Context Protocol (MCP) server for web crawling and scraping using spider-rs with comprehensive programmatic scraping capabilities.
 
-## 🚀 Features
+## Features
 
-### Core Capabilities
-- **Fast Web Crawling**: Multi-threaded crawling with configurable concurrency
-- **Content Extraction**: Extract text, links, images, and metadata
-- **Comprehensive Scraping**: Full page content with structured data extraction
-- **Robots.txt Respect**: Ethical crawling with robots.txt compliance
-- **Rate Limiting**: Polite crawling with configurable delays
-- **URL Filtering**: Blacklist/whitelist support with regex patterns
+### Core Scraping Tools
+- **CSS Selector Support**: Use powerful CSS selectors for element extraction
+- **XPath Alternatives**: Convert common XPath expressions to CSS selectors
+- **Element Extraction**: Extract elements, text, attributes, and metadata
+- **Form Analysis**: Analyze and extract form fields and structures
+- **Table Extraction**: Extract structured table data with headers
+- **Link & Image Extraction**: Comprehensive link and image discovery
+- **Pattern Matching**: Search content using regular expressions
+- **Structured Data**: Extract JSON-LD and microdata
 
 ### Advanced Features
-- **Chrome Integration**: JavaScript rendering and screenshot capture
-- **Stealth Mode**: Anti-detection crawling capabilities
-- **Caching**: HTTP response caching for efficiency
-- **Proxy Support**: HTTP/HTTPS/SOCKS5 proxy configuration
-- **Subdomain Handling**: Configurable subdomain and TLD crawling
-- **Custom Headers**: Full control over HTTP headers and user agents
-- **Sitemap Integration**: Automatic sitemap.xml parsing and inclusion
+- **Session Management**: Maintain cookies and session state
+- **Metadata Extraction**: Extract page titles, descriptions, and Open Graph data
+- **Comprehensive Scraping**: One-stop tool for complete page analysis
+- **Error Handling**: Robust error handling and reporting
 
-### Content Extraction
-- **Text Content**: Clean text extraction from HTML
-- **Links**: All links with metadata (title, rel, etc.)
-- **Images**: Image URLs with alt text and dimensions
-- **Metadata**: Open Graph, Twitter Cards, schema.org data
-- **Social Links**: Automatic social media link detection
-- **Email/Phone**: Extract contact information from pages
+## Available Tools
 
-## 🛠 Installation
+### 1. `scrape`
+Basic webpage scraping with content extraction using readability.
 
-### From Source
-
-```bash
-git clone <repository-url>
-cd mcp-servers/mcp-spider
-cargo build --release
+```json
+{
+  "url": "https://example.com"
+}
 ```
 
-### Using Cargo
+### 2. `select_elements`
+Select elements using CSS selectors.
 
-```bash
-cargo install --path mcp-spider
-```
-
-## 📋 Usage
-
-### Starting the MCP Server
-
-```bash
-# Start with default settings (STDIO transport)
-./target/release/mcp-spider
-
-# Start with debug logging
-./target/release/mcp-spider --debug
-
-# Generate example configuration
-./target/release/mcp-spider generate-config
-```
-
-### Command Line Options
-
-```bash
-# Show all capabilities and configuration
-./target/release/mcp-spider info
-
-# Test crawling functionality
-./target/release/mcp-spider test --url https://example.com
-
-# Test scraping functionality  
-./target/release/mcp-spider test --url https://example.com --scrape
-
-# Custom configuration
-./target/release/mcp-spider --max-concurrency 20 --default-delay 0.5 --stealth-mode
-```
-
-## 🔧 MCP Tools
-
-### `crawl` - Website Crawling
-
-Crawls websites and returns discovered URLs with comprehensive configuration options.
-
-**Parameters:**
-- `url` (required): Starting URL to crawl
-- `depth`: Maximum crawl depth (default: 2)
-- `concurrency`: Number of concurrent requests (default: 10)
-- `delay`: Delay between requests in seconds (default: 1.0)
-- `respect_robots_txt`: Follow robots.txt rules (default: true)
-- `subdomains`: Allow subdomain crawling (default: false)
-- `blacklist`: Array of regex patterns to exclude URLs
-- `whitelist`: Array of regex patterns to include URLs
-- `headers`: Custom HTTP headers object
-- `user_agent`: Custom User-Agent string
-- `cache`: Enable HTTP caching (default: false)
-- `stealth_mode`: Enable stealth crawling (default: false)
-- `max_redirects`: Maximum redirects to follow (default: 5)
-- `max_file_size`: Maximum file size in bytes
-- `include_sitemap`: Include sitemap.xml URLs (default: true)
-
-**Example:**
 ```json
 {
   "url": "https://example.com",
-  "depth": 3,
-  "concurrency": 15,
-  "delay": 2.0,
-  "blacklist": [".*\\.pdf$", ".*/admin/.*"],
-  "headers": {
-    "Accept-Language": "en-US,en;q=0.9"
+  "selector": "div.content p"
+}
+```
+
+### 3. `extract_text`
+Extract text content from elements.
+
+```json
+{
+  "url": "https://example.com",
+  "selector": "h1, h2, h3"
+}
+```
+
+### 4. `extract_attributes`
+Extract specific attribute values.
+
+```json
+{
+  "url": "https://example.com",
+  "selector": "a",
+  "attribute": "href"
+}
+```
+
+### 5. `extract_links`
+Extract all links from a webpage.
+
+```json
+{
+  "url": "https://example.com"
+}
+```
+
+### 6. `extract_images`
+Extract all images with their attributes.
+
+```json
+{
+  "url": "https://example.com"
+}
+```
+
+### 7. `extract_forms`
+Extract form structures and field information.
+
+```json
+{
+  "url": "https://example.com"
+}
+```
+
+### 8. `extract_tables`
+Extract table data with headers and rows.
+
+```json
+{
+  "url": "https://example.com"
+}
+```
+
+### 9. `extract_metadata`
+Extract page metadata including Open Graph data.
+
+```json
+{
+  "url": "https://example.com"
+}
+```
+
+### 10. `search_patterns`
+Search for text patterns using regular expressions.
+
+```json
+{
+  "url": "https://example.com",
+  "pattern": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"
+}
+```
+
+### 11. `extract_structured_data`
+Extract JSON-LD and microdata structured information.
+
+```json
+{
+  "url": "https://example.com"
+}
+```
+
+### 12. `xpath_to_css`
+Convert XPath expressions to CSS selectors.
+
+```json
+{
+  "xpath": "//div[@class='content']//p[1]",
+  "show_common_patterns": true
+}
+```
+
+### 13. `advanced_scrape`
+Comprehensive scraping with customizable data extraction.
+
+```json
+{
+  "url": "https://example.com",
+  "include_links": true,
+  "include_images": true,
+  "include_forms": true,
+  "include_tables": true,
+  "include_metadata": true,
+  "include_structured_data": true
+}
+```
+
+## CSS Selector Examples
+
+The server supports full CSS selector syntax:
+
+- **Element selectors**: `div`, `p`, `span`
+- **Class selectors**: `.classname`, `div.content`
+- **ID selectors**: `#id`, `div#header`
+- **Attribute selectors**: `[href]`, `[type="text"]`, `[class*="partial"]`
+- **Pseudo-selectors**: `:first-child`, `:last-child`, `:nth-child(n)`
+- **Descendant selectors**: `div p`, `nav > ul > li`
+- **Multiple selectors**: `h1, h2, h3`
+
+## XPath to CSS Conversion
+
+Common XPath patterns and their CSS equivalents:
+
+| XPath | CSS Selector |
+|-------|-------------|
+| `//div` | `div` |
+| `//a[@href]` | `a[href]` |
+| `//input[@type='text']` | `input[type='text']` |
+| `//div[@id='content']` | `div#content` |
+| `//span[contains(@class, 'highlight')]` | `span[class*='highlight']` |
+| `//p[1]` | `p:first-child` |
+| `//li[last()]` | `li:last-child` |
+| `/html/body/div` | `html > body > div` |
+
+## Usage Examples
+
+### Extract Article Headlines
+```json
+{
+  "url": "https://news.ycombinator.com",
+  "selector": ".titleline > a"
+}
+```
+
+### Find Email Addresses
+```json
+{
+  "url": "https://example.com/contact",
+  "pattern": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"
+}
+```
+
+### Extract Product Information
+```json
+{
+  "url": "https://shop.example.com/product/123",
+  "selector": ".product-title, .price, .description"
+}
+```
+
+### Analyze Form Fields
+```json
+{
+  "url": "https://example.com/signup"
+}
+```
+
+## Installation
+
+1. Add to your MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "spider": {
+      "command": "mcp-spider",
+      "args": ["--debug"]
+    }
   }
 }
 ```
 
-### `scrape` - Content Extraction
-
-Scrapes websites and extracts structured content including text, links, images, and metadata.
-
-**Parameters:**
-All `crawl` parameters plus:
-- `extract_text`: Extract text content (default: true)
-- `extract_links`: Extract all links (default: true) 
-- `extract_images`: Extract image information (default: true)
-- `extract_metadata`: Extract page metadata (default: true)
-- `take_screenshots`: Capture page screenshots (default: false)
-- `screenshot_params`: Screenshot configuration object
-
-**Screenshot Parameters:**
-- `full_page`: Capture full page (default: true)
-- `quality`: Image quality 1-100 (default: 90)
-- `format`: Image format "png" or "jpeg" (default: "png")
-- `viewport_width`: Viewport width (default: 1920)
-- `viewport_height`: Viewport height (default: 1080)
-
-**Example:**
-```json
-{
-  "url": "https://news.example.com",
-  "depth": 2,
-  "extract_text": true,
-  "extract_links": true,
-  "extract_metadata": true,
-  "take_screenshots": true,
-  "screenshot_params": {
-    "full_page": true,
-    "quality": 95,
-    "format": "png"
-  }
-}
-```
-
-## 📊 Output Formats
-
-### Crawl Results
-```json
-{
-  "urls": ["https://example.com", "https://example.com/page1"],
-  "pages_crawled": 25,
-  "pages_failed": 2,
-  "duration_ms": 5420,
-  "sitemap_urls": ["https://example.com/sitemap.xml"],
-  "error_pages": [
-    {
-      "url": "https://example.com/broken",
-      "error": "HTTP 404",
-      "status_code": 404
-    }
-  ]
-}
-```
-
-### Scrape Results
-```json
-{
-  "pages": [
-    {
-      "url": "https://example.com",
-      "status_code": 200,
-      "title": "Example Website",
-      "content": "<html>...</html>",
-      "text_content": "Welcome to our website...",
-      "links": [
-        {
-          "url": "https://example.com/about",
-          "text": "About Us",
-          "title": "Learn about our company",
-          "rel": null
-        }
-      ],
-      "images": [
-        {
-          "url": "https://example.com/logo.png",
-          "alt": "Company Logo",
-          "width": 200,
-          "height": 100
-        }
-      ],
-      "metadata": {
-        "description": "Example website description",
-        "keywords": ["example", "website"],
-        "og_title": "Example Website",
-        "og_image": "https://example.com/og-image.png"
-      },
-      "screenshot_base64": "iVBORw0KGgoAAAANSUhEUgAA...",
-      "duration_ms": 1250
-    }
-  ],
-  "pages_crawled": 15,
-  "pages_failed": 1,
-  "duration_ms": 12300
-}
-```
-
-## ⚙️ Configuration
-
-### Environment Variables
-
-- `CHROME_PATH`: Path to Chrome/Chromium executable
-- `SCREENSHOT_DIRECTORY`: Directory to save screenshots
-
-### Configuration Presets
-
-The server includes several built-in configuration presets:
-
-- **Fast Crawl**: High concurrency, minimal delays
-- **Polite Crawl**: Low concurrency, respectful delays
-- **Comprehensive Scrape**: Full content extraction with screenshots
-- **Stealth Crawl**: Anti-detection mode with randomization
-
-## 🚀 Performance
-
-The spider-rs library provides excellent performance characteristics:
-
-- **Concurrent**: Multi-threaded crawling with configurable workers
-- **Memory Efficient**: Streaming processing with minimal memory usage
-- **Fast**: Can crawl millions of pages with proper configuration
-- **Scalable**: Horizontal scaling support with distributed workers
-
-## 🔒 Ethical Considerations
-
-This tool is designed for ethical web crawling:
-
-- **Robots.txt Compliance**: Automatic robots.txt parsing and respect
-- **Rate Limiting**: Built-in delays to avoid overwhelming servers
-- **User Agent**: Proper identification in requests
-- **Resource Limits**: Configurable limits to prevent abuse
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-1. **Chrome not found**: Set `CHROME_PATH` environment variable
-2. **SSL errors**: Use `accept_invalid_certs: true` for testing
-3. **Rate limiting**: Increase delay or reduce concurrency
-4. **Memory usage**: Enable caching or reduce concurrent requests
-
-### Debug Mode
-
-Enable debug logging for detailed information:
+2. Build the server:
 
 ```bash
-./target/release/mcp-spider --debug test --url https://example.com
+cargo build --release
 ```
 
-## 📄 License
+## Command Line Options
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+- `--debug`: Enable debug logging
+- `--user-agent <string>`: Set user agent string
+- `--delay <seconds>`: Default delay between requests
+- `--max-depth <number>`: Maximum crawl depth
+- `--subdomains`: Enable subdomain crawling
+- `--respect-robots <bool>`: Respect robots.txt
 
-## 🤝 Contributing
+## Error Handling
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+All tools include comprehensive error handling:
 
-## 🔗 Links
+- Invalid CSS selectors return detailed error messages
+- Network failures are gracefully handled
+- Malformed HTML is parsed with error recovery
+- Timeout and rate limiting protection
 
-- [spider-rs GitHub](https://github.com/spider-rs/spider)
-- [Model Context Protocol](https://github.com/modelcontextprotocol)
-- [MCP Specification](https://spec.modelcontextprotocol.io/)
+## Performance Considerations
 
-## 📝 Changelog
+- Session reuse for efficient multiple requests
+- Cookie management for authenticated scraping
+- Configurable delays to respect server limits
+- Memory-efficient HTML parsing
 
-### v1.0.0
-- Initial release with spider-rs integration
-- Full MCP compatibility
-- Comprehensive crawling and scraping features
-- Chrome integration for screenshots
-- Advanced configuration options
+## License
+
+This project is licensed under the MIT License.
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Ensure all tests pass: `cargo test`
+5. Submit a pull request
+
+## Examples Repository
+
+For more examples and use cases, see the `examples/` directory:
+
+- E-commerce product scraping
+- News article extraction
+- Social media data collection
+- Form automation scripts
+- Table data extraction
+- SEO metadata analysis
