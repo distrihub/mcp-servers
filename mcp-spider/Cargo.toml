@@ -29,26 +29,14 @@ clap = { workspace = true }
 url = { workspace = true }
 chrono = { workspace = true }
 
-# Spider-rs and related dependencies
-spider = { version = "1.99", features = ["serde"] }
+# Spider-rs with stable features - using older compatible version
+spider = { version = "1.90", features = ["serde"] }
 
-# Additional dependencies for enhanced functionality
+# Additional dependencies for enhanced functionality  
 regex = { workspace = true }
-scraper = "0.17"
-reqwest = { version = "0.11", features = ["json", "cookies"] }
-readability = "0.3.0"
 uuid = { workspace = true }
-
-# Enhanced scraping capabilities
-selectors = "0.22"
-html5ever = "0.26"
-markup5ever_rcdom = "0.2"
-ego-tree = "0.6"
-cssparser = "0.31"
 base64 = "0.21"
 mime = "0.3"
-cookie = "0.17"
-
 
 [dev-dependencies]
 tempfile = "3.0"

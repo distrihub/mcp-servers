@@ -5,12 +5,13 @@ use async_mcp::types::{
     CallToolRequest, CallToolResponse, ListRequest, PromptsListResponse, Resource,
     ResourcesListResponse, ServerCapabilities, Tool, ToolResponseContent,
 };
-use readability::extractor::extract;
+use base64::Engine;
 use serde_json::json;
 use spider::website::Website;
 use tracing::info;
 use url::Url;
-use crate::scraper_tools::{ElementExtractor, ScrapingSession, XPathAlternative};
+use std::collections::HashMap;
+use crate::scraper_tools::{ElementExtractor, SpiderSession, WebAutomation, XPathAlternative, ScrapingOptions, create_mock_page};
 
 pub fn build<T: Transport>(t: T) -> Result<Server<T>> {
     let mut server = Server::builder(t)
@@ -40,7 +41,10 @@ pub fn build<T: Transport>(t: T) -> Result<Server<T>> {
 
 fn list_resources() -> ResourcesListResponse {
     let base = Url::parse("https://distribot.local/").unwrap();
-    let resources = ["crawl", "scrape", "extract", "select", "forms", "tables", "metadata"]
+    let resources = [
+        "crawl", "scrape", "extract", "select", "forms", "tables", "metadata",
+        "chrome_scrape", "automation", "screenshot", "wait_element", "execute_js"
+    ]
         .iter()
         .map(|r| Resource {
             uri: base.join(r).unwrap(),
@@ -57,7 +61,12 @@ fn list_resources() -> ResourcesListResponse {
 }
 
 fn register_tools<T: Transport>(server: &mut ServerBuilder<T>) -> Result<()> {
+    // Basic scraping tools
     register_scrape_tool(server)?;
+    register_chrome_scrape_tool(server)?;
+    register_advanced_scrape_tool(server)?;
+    
+    // Element extraction tools
     register_select_elements_tool(server)?;
     register_extract_text_tool(server)?;
     register_extract_attributes_tool(server)?;
@@ -68,8 +77,17 @@ fn register_tools<T: Transport>(server: &mut ServerBuilder<T>) -> Result<()> {
     register_extract_metadata_tool(server)?;
     register_search_patterns_tool(server)?;
     register_extract_structured_data_tool(server)?;
+    
+    // XPath tools
     register_xpath_to_css_tool(server)?;
-    register_advanced_scrape_tool(server)?;
+    
+    // Web automation tools
+    register_click_element_tool(server)?;
+    register_fill_form_tool(server)?;
+    register_submit_form_tool(server)?;
+    register_take_screenshot_tool(server)?;
+    register_wait_for_element_tool(server)?;
+    register_execute_javascript_tool(server)?;
 
     Ok(())
 }
@@ -77,7 +95,7 @@ fn register_tools<T: Transport>(server: &mut ServerBuilder<T>) -> Result<()> {
 fn register_scrape_tool<T: Transport>(server: &mut ServerBuilder<T>) -> Result<()> {
     let scrape_tool = Tool {
         name: "scrape".to_string(),
-        description: Some("Scrape a single webpage and extract basic content using readability".to_string()),
+        description: Some("Scrape a single webpage using spider".to_string()),
         input_schema: json!({
             "type": "object",
             "properties": {
@@ -93,8 +111,8 @@ fn register_scrape_tool<T: Transport>(server: &mut ServerBuilder<T>) -> Result<(
         output_schema: Some(json!({
             "type": "object",
             "properties": {
-                "content": {"type": "string"},
-                "text": {"type": "string"}
+                "html": {"type": "string"},
+                "url": {"type": "string"}
             },
             "additionalProperties": false
         })),
@@ -106,32 +124,30 @@ fn register_scrape_tool<T: Transport>(server: &mut ServerBuilder<T>) -> Result<(
             let result: Result<CallToolResponse, anyhow::Error> = async {
                 let url = args["url"].as_str().context("url is missing")?;
 
-                let mut website = Website::new(url)
-                    .with_user_agent(Some("DistriBot"))
+                let mut website = Website::new(url);
+                website
+                    .with_user_agent(Some("mcp-spider/1.0"))
                     .with_subdomains(false)
                     .with_limit(1)
                     .with_tld(false)
                     .with_redirect_limit(3)
-                    .with_respect_robots_txt(false)
-                    .build()?;
+                    .with_respect_robots_txt(false);
 
-                website.scrape().await;
-
-                let page = website
-                    .get_pages()
-                    .map(|pages| pages.iter().next())
-                    .flatten();
+                website.crawl().await;
 
                 let mut is_error = None;
-                let content = if let Some(page) = page {
-                    let input = page.get_bytes().unwrap();
-                    let url = Url::parse(url)?;
-                    let mut reader = std::io::Cursor::new(input);
-                    let product = extract(&mut reader, &url)?;
-                    json!({
-                        "content": product.content,
-                        "text": product.text,
-                    })
+                let content = if let Some(pages) = website.get_pages() {
+                    if let Some(page) = pages.first() {
+                        json!({
+                            "html": page.get_html(),
+                            "url": page.get_url(),
+                        })
+                    } else {
+                        is_error = Some(true);
+                        json!({
+                            "error": "No pages found",
+                        })
+                    }
                 } else {
                     is_error = Some(true);
                     json!({
@@ -144,6 +160,95 @@ fn register_scrape_tool<T: Transport>(server: &mut ServerBuilder<T>) -> Result<(
                         text: serde_json::to_string_pretty(&content)?,
                     }],
                     is_error: is_error,
+                    meta: None,
+                })
+            }
+            .await;
+
+            handle_tool_result(result)
+        })
+    });
+
+    Ok(())
+}
+
+fn register_chrome_scrape_tool<T: Transport>(server: &mut ServerBuilder<T>) -> Result<()> {
+    let tool = Tool {
+        name: "chrome_scrape".to_string(),
+        description: Some("Scrape a webpage using Chrome headless browser with JavaScript support (simulated)".to_string()),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The URL to scrape",
+                    "format": "uri"
+                },
+                "stealth_mode": {
+                    "type": "boolean",
+                    "description": "Enable stealth mode to avoid detection",
+                    "default": false
+                },
+                "take_screenshot": {
+                    "type": "boolean", 
+                    "description": "Take a screenshot of the page",
+                    "default": false
+                },
+                "wait_for_selector": {
+                    "type": "string",
+                    "description": "CSS selector to wait for before extracting content"
+                },
+                "timeout_seconds": {
+                    "type": "number",
+                    "description": "Timeout in seconds",
+                    "default": 30
+                }
+            },
+            "required": ["url"],
+            "additionalProperties": false
+        }),
+        output_schema: Some(json!({
+            "type": "object",
+            "properties": {
+                "html": {"type": "string"},
+                "url": {"type": "string"},
+                "screenshot": {"type": "string"}
+            }
+        })),
+    };
+
+    server.register_tool(tool, |req: CallToolRequest| {
+        Box::pin(async move {
+            let args = req.arguments.unwrap_or_default();
+            let result: Result<CallToolResponse, anyhow::Error> = async {
+                let url = args["url"].as_str().context("url is missing")?;
+                let stealth_mode = args["stealth_mode"].as_bool().unwrap_or(false);
+                let take_screenshot = args["take_screenshot"].as_bool().unwrap_or(false);
+                let _wait_for_selector = args["wait_for_selector"].as_str();
+                let _timeout_seconds = args["timeout_seconds"].as_u64().unwrap_or(30);
+
+                let options = ScrapingOptions {
+                    use_chrome: true,
+                    stealth_mode,
+                    take_screenshot,
+                    ..Default::default()
+                };
+
+                let session = SpiderSession::new().with_chrome().with_stealth();
+                let scraping_result = session.scrape_with_options(url, options).await?;
+
+                let content = json!({
+                    "html": scraping_result.html,
+                    "url": scraping_result.url,
+                    "screenshot": scraping_result.screenshot,
+                    "note": "Chrome features are simulated in this version"
+                });
+
+                Ok(CallToolResponse {
+                    content: vec![ToolResponseContent::Text {
+                        text: serde_json::to_string_pretty(&content)?,
+                    }],
+                    is_error: None,
                     meta: None,
                 })
             }
@@ -171,6 +276,11 @@ fn register_select_elements_tool<T: Transport>(server: &mut ServerBuilder<T>) ->
                 "selector": {
                     "type": "string",
                     "description": "CSS selector to match elements"
+                },
+                "use_chrome": {
+                    "type": "boolean",
+                    "description": "Use Chrome for JavaScript-heavy sites",
+                    "default": false
                 }
             },
             "required": ["url", "selector"],
@@ -188,10 +298,13 @@ fn register_select_elements_tool<T: Transport>(server: &mut ServerBuilder<T>) ->
             let result: Result<CallToolResponse, anyhow::Error> = async {
                 let url = args["url"].as_str().context("url is missing")?;
                 let selector = args["selector"].as_str().context("selector is missing")?;
+                let _use_chrome = args["use_chrome"].as_bool().unwrap_or(false);
 
-                let mut session = ScrapingSession::new();
+                let session = SpiderSession::new();
                 let html = session.fetch_page(url).await?;
-                let extractor = ElementExtractor::new(&html);
+                
+                let page = create_mock_page(url, &html);
+                let extractor = ElementExtractor::new(&html, page);
                 let elements = extractor.select_elements(selector)?;
 
                 Ok(CallToolResponse {
@@ -226,6 +339,11 @@ fn register_extract_text_tool<T: Transport>(server: &mut ServerBuilder<T>) -> Re
                 "selector": {
                     "type": "string",
                     "description": "CSS selector to match elements"
+                },
+                "use_chrome": {
+                    "type": "boolean",
+                    "description": "Use Chrome for JavaScript-heavy sites",
+                    "default": false
                 }
             },
             "required": ["url", "selector"],
@@ -243,10 +361,13 @@ fn register_extract_text_tool<T: Transport>(server: &mut ServerBuilder<T>) -> Re
             let result: Result<CallToolResponse, anyhow::Error> = async {
                 let url = args["url"].as_str().context("url is missing")?;
                 let selector = args["selector"].as_str().context("selector is missing")?;
+                let _use_chrome = args["use_chrome"].as_bool().unwrap_or(false);
 
-                let mut session = ScrapingSession::new();
+                let session = SpiderSession::new();
                 let html = session.fetch_page(url).await?;
-                let extractor = ElementExtractor::new(&html);
+                
+                let page = create_mock_page(url, &html);
+                let extractor = ElementExtractor::new(&html, page);
                 let texts = extractor.extract_text(selector)?;
 
                 Ok(CallToolResponse {
@@ -285,6 +406,11 @@ fn register_extract_attributes_tool<T: Transport>(server: &mut ServerBuilder<T>)
                 "attribute": {
                     "type": "string",
                     "description": "Attribute name to extract"
+                },
+                "use_chrome": {
+                    "type": "boolean",
+                    "description": "Use Chrome for JavaScript-heavy sites",
+                    "default": false
                 }
             },
             "required": ["url", "selector", "attribute"],
@@ -303,10 +429,13 @@ fn register_extract_attributes_tool<T: Transport>(server: &mut ServerBuilder<T>)
                 let url = args["url"].as_str().context("url is missing")?;
                 let selector = args["selector"].as_str().context("selector is missing")?;
                 let attribute = args["attribute"].as_str().context("attribute is missing")?;
+                let _use_chrome = args["use_chrome"].as_bool().unwrap_or(false);
 
-                let mut session = ScrapingSession::new();
+                let session = SpiderSession::new();
                 let html = session.fetch_page(url).await?;
-                let extractor = ElementExtractor::new(&html);
+                
+                let page = create_mock_page(url, &html);
+                let extractor = ElementExtractor::new(&html, page);
                 let attributes = extractor.extract_attributes(selector, attribute)?;
 
                 Ok(CallToolResponse {
@@ -337,6 +466,11 @@ fn register_extract_links_tool<T: Transport>(server: &mut ServerBuilder<T>) -> R
                     "type": "string",
                     "description": "The URL to scrape",
                     "format": "uri"
+                },
+                "use_chrome": {
+                    "type": "boolean",
+                    "description": "Use Chrome for JavaScript-heavy sites",
+                    "default": false
                 }
             },
             "required": ["url"],
@@ -353,10 +487,13 @@ fn register_extract_links_tool<T: Transport>(server: &mut ServerBuilder<T>) -> R
             let args = req.arguments.unwrap_or_default();
             let result: Result<CallToolResponse, anyhow::Error> = async {
                 let url = args["url"].as_str().context("url is missing")?;
+                let _use_chrome = args["use_chrome"].as_bool().unwrap_or(false);
 
-                let mut session = ScrapingSession::new();
+                let session = SpiderSession::new();
                 let html = session.fetch_page(url).await?;
-                let extractor = ElementExtractor::new(&html);
+                
+                let page = create_mock_page(url, &html);
+                let extractor = ElementExtractor::new(&html, page);
                 let links = extractor.extract_links()?;
 
                 Ok(CallToolResponse {
@@ -387,6 +524,11 @@ fn register_extract_images_tool<T: Transport>(server: &mut ServerBuilder<T>) -> 
                     "type": "string",
                     "description": "The URL to scrape",
                     "format": "uri"
+                },
+                "use_chrome": {
+                    "type": "boolean",
+                    "description": "Use Chrome for JavaScript-heavy sites",
+                    "default": false
                 }
             },
             "required": ["url"],
@@ -403,10 +545,13 @@ fn register_extract_images_tool<T: Transport>(server: &mut ServerBuilder<T>) -> 
             let args = req.arguments.unwrap_or_default();
             let result: Result<CallToolResponse, anyhow::Error> = async {
                 let url = args["url"].as_str().context("url is missing")?;
+                let _use_chrome = args["use_chrome"].as_bool().unwrap_or(false);
 
-                let mut session = ScrapingSession::new();
+                let session = SpiderSession::new();
                 let html = session.fetch_page(url).await?;
-                let extractor = ElementExtractor::new(&html);
+                
+                let page = create_mock_page(url, &html);
+                let extractor = ElementExtractor::new(&html, page);
                 let images = extractor.extract_images()?;
 
                 Ok(CallToolResponse {
@@ -437,6 +582,11 @@ fn register_extract_forms_tool<T: Transport>(server: &mut ServerBuilder<T>) -> R
                     "type": "string",
                     "description": "The URL to scrape",
                     "format": "uri"
+                },
+                "use_chrome": {
+                    "type": "boolean",
+                    "description": "Use Chrome for JavaScript-heavy sites",
+                    "default": false
                 }
             },
             "required": ["url"],
@@ -453,10 +603,13 @@ fn register_extract_forms_tool<T: Transport>(server: &mut ServerBuilder<T>) -> R
             let args = req.arguments.unwrap_or_default();
             let result: Result<CallToolResponse, anyhow::Error> = async {
                 let url = args["url"].as_str().context("url is missing")?;
+                let _use_chrome = args["use_chrome"].as_bool().unwrap_or(false);
 
-                let mut session = ScrapingSession::new();
+                let session = SpiderSession::new();
                 let html = session.fetch_page(url).await?;
-                let extractor = ElementExtractor::new(&html);
+                
+                let page = create_mock_page(url, &html);
+                let extractor = ElementExtractor::new(&html, page);
                 let forms = extractor.extract_forms()?;
 
                 Ok(CallToolResponse {
@@ -487,6 +640,11 @@ fn register_extract_tables_tool<T: Transport>(server: &mut ServerBuilder<T>) -> 
                     "type": "string",
                     "description": "The URL to scrape",
                     "format": "uri"
+                },
+                "use_chrome": {
+                    "type": "boolean",
+                    "description": "Use Chrome for JavaScript-heavy sites",
+                    "default": false
                 }
             },
             "required": ["url"],
@@ -503,10 +661,13 @@ fn register_extract_tables_tool<T: Transport>(server: &mut ServerBuilder<T>) -> 
             let args = req.arguments.unwrap_or_default();
             let result: Result<CallToolResponse, anyhow::Error> = async {
                 let url = args["url"].as_str().context("url is missing")?;
+                let _use_chrome = args["use_chrome"].as_bool().unwrap_or(false);
 
-                let mut session = ScrapingSession::new();
+                let session = SpiderSession::new();
                 let html = session.fetch_page(url).await?;
-                let extractor = ElementExtractor::new(&html);
+                
+                let page = create_mock_page(url, &html);
+                let extractor = ElementExtractor::new(&html, page);
                 let tables = extractor.extract_tables()?;
 
                 Ok(CallToolResponse {
@@ -537,6 +698,11 @@ fn register_extract_metadata_tool<T: Transport>(server: &mut ServerBuilder<T>) -
                     "type": "string",
                     "description": "The URL to scrape",
                     "format": "uri"
+                },
+                "use_chrome": {
+                    "type": "boolean",
+                    "description": "Use Chrome for JavaScript-heavy sites",
+                    "default": false
                 }
             },
             "required": ["url"],
@@ -552,11 +718,14 @@ fn register_extract_metadata_tool<T: Transport>(server: &mut ServerBuilder<T>) -
             let args = req.arguments.unwrap_or_default();
             let result: Result<CallToolResponse, anyhow::Error> = async {
                 let url = args["url"].as_str().context("url is missing")?;
+                let _use_chrome = args["use_chrome"].as_bool().unwrap_or(false);
 
-                let mut session = ScrapingSession::new();
+                let session = SpiderSession::new();
                 let html = session.fetch_page(url).await?;
-                let extractor = ElementExtractor::new(&html);
-                let metadata = extractor.extract_metadata();
+                
+                let page = create_mock_page(url, &html);
+                let extractor = ElementExtractor::new(&html, page);
+                let metadata = extractor.extract_metadata()?;
 
                 Ok(CallToolResponse {
                     content: vec![ToolResponseContent::Text {
@@ -590,6 +759,11 @@ fn register_search_patterns_tool<T: Transport>(server: &mut ServerBuilder<T>) ->
                 "pattern": {
                     "type": "string",
                     "description": "Regular expression pattern to search for"
+                },
+                "use_chrome": {
+                    "type": "boolean",
+                    "description": "Use Chrome for JavaScript-heavy sites",
+                    "default": false
                 }
             },
             "required": ["url", "pattern"],
@@ -607,10 +781,13 @@ fn register_search_patterns_tool<T: Transport>(server: &mut ServerBuilder<T>) ->
             let result: Result<CallToolResponse, anyhow::Error> = async {
                 let url = args["url"].as_str().context("url is missing")?;
                 let pattern = args["pattern"].as_str().context("pattern is missing")?;
+                let _use_chrome = args["use_chrome"].as_bool().unwrap_or(false);
 
-                let mut session = ScrapingSession::new();
+                let session = SpiderSession::new();
                 let html = session.fetch_page(url).await?;
-                let extractor = ElementExtractor::new(&html);
+                
+                let page = create_mock_page(url, &html);
+                let extractor = ElementExtractor::new(&html, page);
                 let matches = extractor.search_patterns(pattern)?;
 
                 Ok(CallToolResponse {
@@ -641,6 +818,11 @@ fn register_extract_structured_data_tool<T: Transport>(server: &mut ServerBuilde
                     "type": "string",
                     "description": "The URL to scrape",
                     "format": "uri"
+                },
+                "use_chrome": {
+                    "type": "boolean",
+                    "description": "Use Chrome for JavaScript-heavy sites",
+                    "default": false
                 }
             },
             "required": ["url"],
@@ -657,10 +839,13 @@ fn register_extract_structured_data_tool<T: Transport>(server: &mut ServerBuilde
             let args = req.arguments.unwrap_or_default();
             let result: Result<CallToolResponse, anyhow::Error> = async {
                 let url = args["url"].as_str().context("url is missing")?;
+                let _use_chrome = args["use_chrome"].as_bool().unwrap_or(false);
 
-                let mut session = ScrapingSession::new();
+                let session = SpiderSession::new();
                 let html = session.fetch_page(url).await?;
-                let extractor = ElementExtractor::new(&html);
+                
+                let page = create_mock_page(url, &html);
+                let extractor = ElementExtractor::new(&html, page);
                 let structured_data = extractor.extract_structured_data()?;
 
                 Ok(CallToolResponse {
@@ -751,6 +936,21 @@ fn register_advanced_scrape_tool<T: Transport>(server: &mut ServerBuilder<T>) ->
                     "description": "The URL to scrape",
                     "format": "uri"
                 },
+                "use_chrome": {
+                    "type": "boolean",
+                    "description": "Use Chrome for JavaScript-heavy sites",
+                    "default": false
+                },
+                "stealth_mode": {
+                    "type": "boolean",
+                    "description": "Enable stealth mode",
+                    "default": false
+                },
+                "take_screenshot": {
+                    "type": "boolean",
+                    "description": "Take a screenshot",
+                    "default": false
+                },
                 "include_links": {
                     "type": "boolean",
                     "description": "Include links extraction",
@@ -795,6 +995,9 @@ fn register_advanced_scrape_tool<T: Transport>(server: &mut ServerBuilder<T>) ->
             let args = req.arguments.unwrap_or_default();
             let result: Result<CallToolResponse, anyhow::Error> = async {
                 let url = args["url"].as_str().context("url is missing")?;
+                let use_chrome = args["use_chrome"].as_bool().unwrap_or(false);
+                let stealth_mode = args["stealth_mode"].as_bool().unwrap_or(false);
+                let take_screenshot = args["take_screenshot"].as_bool().unwrap_or(false);
                 let include_links = args["include_links"].as_bool().unwrap_or(true);
                 let include_images = args["include_images"].as_bool().unwrap_or(true);
                 let include_forms = args["include_forms"].as_bool().unwrap_or(true);
@@ -802,37 +1005,450 @@ fn register_advanced_scrape_tool<T: Transport>(server: &mut ServerBuilder<T>) ->
                 let include_metadata = args["include_metadata"].as_bool().unwrap_or(true);
                 let include_structured_data = args["include_structured_data"].as_bool().unwrap_or(true);
 
-                let mut session = ScrapingSession::new();
-                let html = session.fetch_page(url).await?;
-                let extractor = ElementExtractor::new(&html);
+                let options = ScrapingOptions {
+                    use_chrome,
+                    stealth_mode,
+                    take_screenshot,
+                    extract_metadata: include_metadata,
+                    extract_links: include_links,
+                    extract_images: include_images,
+                    extract_forms: include_forms,
+                    extract_tables: include_tables,
+                    extract_structured_data: include_structured_data,
+                    ..Default::default()
+                };
+
+                let session = if use_chrome {
+                    SpiderSession::new().with_chrome().with_stealth()
+                } else {
+                    SpiderSession::new()
+                };
+                
+                let scraping_result = session.scrape_with_options(url, options).await?;
 
                 let mut response = json!({
-                    "url": url
+                    "url": scraping_result.url,
+                    "html": scraping_result.html
                 });
 
-                if include_metadata {
-                    response["metadata"] = extractor.extract_metadata();
+                if let Some(metadata) = scraping_result.metadata {
+                    response["metadata"] = metadata;
                 }
 
-                if include_links {
-                    response["links"] = json!(extractor.extract_links()?);
+                if let Some(links) = scraping_result.links {
+                    response["links"] = json!(links);
                 }
 
-                if include_images {
-                    response["images"] = json!(extractor.extract_images()?);
+                if let Some(images) = scraping_result.images {
+                    response["images"] = json!(images);
                 }
 
-                if include_forms {
-                    response["forms"] = json!(extractor.extract_forms()?);
+                if let Some(forms) = scraping_result.forms {
+                    response["forms"] = json!(forms);
                 }
 
-                if include_tables {
-                    response["tables"] = json!(extractor.extract_tables()?);
+                if let Some(tables) = scraping_result.tables {
+                    response["tables"] = json!(tables);
                 }
 
-                if include_structured_data {
-                    response["structured_data"] = json!(extractor.extract_structured_data()?);
+                if let Some(structured_data) = scraping_result.structured_data {
+                    response["structured_data"] = json!(structured_data);
                 }
+
+                if let Some(screenshot) = scraping_result.screenshot {
+                    response["screenshot"] = json!(screenshot);
+                }
+
+                if use_chrome {
+                    response["note"] = json!("Chrome features are simulated in this version");
+                }
+
+                Ok(CallToolResponse {
+                    content: vec![ToolResponseContent::Text {
+                        text: serde_json::to_string_pretty(&response)?,
+                    }],
+                    is_error: None,
+                    meta: None,
+                })
+            }
+            .await;
+
+            handle_tool_result(result)
+        })
+    });
+
+    Ok(())
+}
+
+// Web automation tools
+fn register_click_element_tool<T: Transport>(server: &mut ServerBuilder<T>) -> Result<()> {
+    let tool = Tool {
+        name: "click_element".to_string(),
+        description: Some("Click an element on a webpage using Chrome automation (simulated)".to_string()),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The URL to navigate to",
+                    "format": "uri"
+                },
+                "selector": {
+                    "type": "string",
+                    "description": "CSS selector of the element to click"
+                }
+            },
+            "required": ["url", "selector"],
+            "additionalProperties": false
+        }),
+        output_schema: Some(json!({
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "message": {"type": "string"}
+            }
+        })),
+    };
+
+    server.register_tool(tool, |req: CallToolRequest| {
+        Box::pin(async move {
+            let args = req.arguments.unwrap_or_default();
+            let result: Result<CallToolResponse, anyhow::Error> = async {
+                let url = args["url"].as_str().context("url is missing")?;
+                let selector = args["selector"].as_str().context("selector is missing")?;
+
+                let automation = WebAutomation::new();
+                let result_message = automation.click_element(url, selector).await?;
+
+                let response = json!({
+                    "success": true,
+                    "message": result_message
+                });
+
+                Ok(CallToolResponse {
+                    content: vec![ToolResponseContent::Text {
+                        text: serde_json::to_string_pretty(&response)?,
+                    }],
+                    is_error: None,
+                    meta: None,
+                })
+            }
+            .await;
+
+            handle_tool_result(result)
+        })
+    });
+
+    Ok(())
+}
+
+fn register_fill_form_tool<T: Transport>(server: &mut ServerBuilder<T>) -> Result<()> {
+    let tool = Tool {
+        name: "fill_form".to_string(),
+        description: Some("Fill form fields on a webpage using Chrome automation (simulated)".to_string()),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The URL to navigate to",
+                    "format": "uri"
+                },
+                "form_data": {
+                    "type": "object",
+                    "description": "Form field names and values to fill",
+                    "additionalProperties": {"type": "string"}
+                }
+            },
+            "required": ["url", "form_data"],
+            "additionalProperties": false
+        }),
+        output_schema: Some(json!({
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "message": {"type": "string"}
+            }
+        })),
+    };
+
+    server.register_tool(tool, |req: CallToolRequest| {
+        Box::pin(async move {
+            let args = req.arguments.unwrap_or_default();
+            let result: Result<CallToolResponse, anyhow::Error> = async {
+                let url = args["url"].as_str().context("url is missing")?;
+                let form_data_json = args["form_data"].as_object().context("form_data is missing")?;
+                
+                let mut form_data = HashMap::new();
+                for (key, value) in form_data_json {
+                    if let Some(val_str) = value.as_str() {
+                        form_data.insert(key.clone(), val_str.to_string());
+                    }
+                }
+
+                let automation = WebAutomation::new();
+                let result_message = automation.fill_form(url, form_data).await?;
+
+                let response = json!({
+                    "success": true,
+                    "message": result_message
+                });
+
+                Ok(CallToolResponse {
+                    content: vec![ToolResponseContent::Text {
+                        text: serde_json::to_string_pretty(&response)?,
+                    }],
+                    is_error: None,
+                    meta: None,
+                })
+            }
+            .await;
+
+            handle_tool_result(result)
+        })
+    });
+
+    Ok(())
+}
+
+fn register_submit_form_tool<T: Transport>(server: &mut ServerBuilder<T>) -> Result<()> {
+    let tool = Tool {
+        name: "submit_form".to_string(),
+        description: Some("Submit a form on a webpage using Chrome automation (simulated)".to_string()),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The URL to navigate to",
+                    "format": "uri"
+                },
+                "form_selector": {
+                    "type": "string",
+                    "description": "CSS selector of the form to submit"
+                }
+            },
+            "required": ["url", "form_selector"],
+            "additionalProperties": false
+        }),
+        output_schema: Some(json!({
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "message": {"type": "string"}
+            }
+        })),
+    };
+
+    server.register_tool(tool, |req: CallToolRequest| {
+        Box::pin(async move {
+            let args = req.arguments.unwrap_or_default();
+            let result: Result<CallToolResponse, anyhow::Error> = async {
+                let url = args["url"].as_str().context("url is missing")?;
+                let form_selector = args["form_selector"].as_str().context("form_selector is missing")?;
+
+                let automation = WebAutomation::new();
+                let result_message = automation.submit_form(url, form_selector).await?;
+
+                let response = json!({
+                    "success": true,
+                    "message": result_message
+                });
+
+                Ok(CallToolResponse {
+                    content: vec![ToolResponseContent::Text {
+                        text: serde_json::to_string_pretty(&response)?,
+                    }],
+                    is_error: None,
+                    meta: None,
+                })
+            }
+            .await;
+
+            handle_tool_result(result)
+        })
+    });
+
+    Ok(())
+}
+
+fn register_take_screenshot_tool<T: Transport>(server: &mut ServerBuilder<T>) -> Result<()> {
+    let tool = Tool {
+        name: "take_screenshot".to_string(),
+        description: Some("Take a screenshot of a webpage or specific element using Chrome (simulated)".to_string()),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The URL to navigate to",
+                    "format": "uri"
+                },
+                "selector": {
+                    "type": "string",
+                    "description": "CSS selector of element to screenshot (optional, full page if not provided)"
+                }
+            },
+            "required": ["url"],
+            "additionalProperties": false
+        }),
+        output_schema: Some(json!({
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "screenshot_data": {"type": "string"},
+                "message": {"type": "string"}
+            }
+        })),
+    };
+
+    server.register_tool(tool, |req: CallToolRequest| {
+        Box::pin(async move {
+            let args = req.arguments.unwrap_or_default();
+            let result: Result<CallToolResponse, anyhow::Error> = async {
+                let url = args["url"].as_str().context("url is missing")?;
+                let selector = args["selector"].as_str();
+
+                let automation = WebAutomation::new();
+                let screenshot_data = automation.take_screenshot(url, selector).await?;
+
+                let response = json!({
+                    "success": true,
+                    "screenshot_data": base64::engine::general_purpose::STANDARD.encode(&screenshot_data),
+                    "message": "Screenshot taken successfully (simulated)"
+                });
+
+                Ok(CallToolResponse {
+                    content: vec![ToolResponseContent::Text {
+                        text: serde_json::to_string_pretty(&response)?,
+                    }],
+                    is_error: None,
+                    meta: None,
+                })
+            }
+            .await;
+
+            handle_tool_result(result)
+        })
+    });
+
+    Ok(())
+}
+
+fn register_wait_for_element_tool<T: Transport>(server: &mut ServerBuilder<T>) -> Result<()> {
+    let tool = Tool {
+        name: "wait_for_element".to_string(),
+        description: Some("Wait for an element to appear on a webpage using Chrome automation (simulated)".to_string()),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The URL to navigate to",
+                    "format": "uri"
+                },
+                "selector": {
+                    "type": "string",
+                    "description": "CSS selector of the element to wait for"
+                },
+                "timeout_ms": {
+                    "type": "number",
+                    "description": "Timeout in milliseconds",
+                    "default": 30000
+                }
+            },
+            "required": ["url", "selector"],
+            "additionalProperties": false
+        }),
+        output_schema: Some(json!({
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "found": {"type": "boolean"},
+                "message": {"type": "string"}
+            }
+        })),
+    };
+
+    server.register_tool(tool, |req: CallToolRequest| {
+        Box::pin(async move {
+            let args = req.arguments.unwrap_or_default();
+            let result: Result<CallToolResponse, anyhow::Error> = async {
+                let url = args["url"].as_str().context("url is missing")?;
+                let selector = args["selector"].as_str().context("selector is missing")?;
+                let timeout_ms = args["timeout_ms"].as_u64().unwrap_or(30000);
+
+                let automation = WebAutomation::new();
+                let found = automation.wait_for_element(url, selector, timeout_ms).await?;
+
+                let response = json!({
+                    "success": true,
+                    "found": found,
+                    "message": if found { "Element found (simulated)" } else { "Element not found within timeout (simulated)" }
+                });
+
+                Ok(CallToolResponse {
+                    content: vec![ToolResponseContent::Text {
+                        text: serde_json::to_string_pretty(&response)?,
+                    }],
+                    is_error: None,
+                    meta: None,
+                })
+            }
+            .await;
+
+            handle_tool_result(result)
+        })
+    });
+
+    Ok(())
+}
+
+fn register_execute_javascript_tool<T: Transport>(server: &mut ServerBuilder<T>) -> Result<()> {
+    let tool = Tool {
+        name: "execute_javascript".to_string(),
+        description: Some("Execute JavaScript code on a webpage using Chrome automation (simulated)".to_string()),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The URL to navigate to",
+                    "format": "uri"
+                },
+                "script": {
+                    "type": "string",
+                    "description": "JavaScript code to execute"
+                }
+            },
+            "required": ["url", "script"],
+            "additionalProperties": false
+        }),
+        output_schema: Some(json!({
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "result": {},
+                "message": {"type": "string"}
+            }
+        })),
+    };
+
+    server.register_tool(tool, |req: CallToolRequest| {
+        Box::pin(async move {
+            let args = req.arguments.unwrap_or_default();
+            let result: Result<CallToolResponse, anyhow::Error> = async {
+                let url = args["url"].as_str().context("url is missing")?;
+                let script = args["script"].as_str().context("script is missing")?;
+
+                let automation = WebAutomation::new();
+                let execution_result = automation.execute_javascript(url, script).await?;
+
+                let response = json!({
+                    "success": true,
+                    "result": execution_result,
+                    "message": "JavaScript executed successfully (simulated)"
+                });
 
                 Ok(CallToolResponse {
                     content: vec![ToolResponseContent::Text {

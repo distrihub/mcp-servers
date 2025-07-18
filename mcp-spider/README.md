@@ -1,10 +1,13 @@
 # MCP Spider Server
 
-An advanced Model Context Protocol (MCP) server for web crawling and scraping using spider-rs with comprehensive programmatic scraping capabilities.
+An advanced Model Context Protocol (MCP) server for web crawling and scraping using spider-rs with comprehensive Chrome automation, headless browsing, and web automation capabilities.
 
 ## Features
 
 ### Core Scraping Tools
+- **Spider-powered crawling**: Built entirely with spider-rs for maximum performance
+- **Chrome headless support**: Use real Chrome browser for JavaScript-heavy sites
+- **Stealth mode**: Avoid bot detection with stealth browsing capabilities
 - **CSS Selector Support**: Use powerful CSS selectors for element extraction
 - **XPath Alternatives**: Convert common XPath expressions to CSS selectors
 - **Element Extraction**: Extract elements, text, attributes, and metadata
@@ -14,16 +17,28 @@ An advanced Model Context Protocol (MCP) server for web crawling and scraping us
 - **Pattern Matching**: Search content using regular expressions
 - **Structured Data**: Extract JSON-LD and microdata
 
-### Advanced Features
-- **Session Management**: Maintain cookies and session state
-- **Metadata Extraction**: Extract page titles, descriptions, and Open Graph data
-- **Comprehensive Scraping**: One-stop tool for complete page analysis
-- **Error Handling**: Robust error handling and reporting
+### Advanced Chrome Features
+- **Headless & Headed modes**: Choose between invisible or visible browser operation
+- **Screenshot capture**: Take full-page or element-specific screenshots
+- **JavaScript execution**: Run custom JavaScript on pages
+- **Element waiting**: Wait for dynamic content to load
+- **Network interception**: Monitor and manipulate network requests
+- **Cookie management**: Handle authentication and session state
+- **User agent spoofing**: Customize browser identification
+
+### Web Automation
+- **Element clicking**: Click buttons, links, and interactive elements
+- **Form filling**: Automatically fill form fields
+- **Form submission**: Submit forms programmatically
+- **Dynamic content handling**: Work with AJAX and SPA applications
+- **Real browser simulation**: Full browser environment for complex sites
 
 ## Available Tools
 
-### 1. `scrape`
-Basic webpage scraping with content extraction using readability.
+### Basic Scraping Tools
+
+#### 1. `scrape`
+Basic webpage scraping using spider.
 
 ```json
 {
@@ -31,102 +46,147 @@ Basic webpage scraping with content extraction using readability.
 }
 ```
 
-### 2. `select_elements`
+#### 2. `chrome_scrape`
+Advanced scraping using Chrome headless browser.
+
+```json
+{
+  "url": "https://example.com",
+  "stealth_mode": true,
+  "take_screenshot": false,
+  "wait_for_selector": ".dynamic-content",
+  "timeout_seconds": 30
+}
+```
+
+#### 3. `advanced_scrape`
+Comprehensive scraping with all extraction options.
+
+```json
+{
+  "url": "https://example.com",
+  "use_chrome": true,
+  "stealth_mode": true,
+  "take_screenshot": true,
+  "include_links": true,
+  "include_images": true,
+  "include_forms": true,
+  "include_tables": true,
+  "include_metadata": true,
+  "include_structured_data": true
+}
+```
+
+### Element Extraction Tools
+
+#### 4. `select_elements`
 Select elements using CSS selectors.
 
 ```json
 {
   "url": "https://example.com",
-  "selector": "div.content p"
+  "selector": "div.content p",
+  "use_chrome": false
 }
 ```
 
-### 3. `extract_text`
+#### 5. `extract_text`
 Extract text content from elements.
 
 ```json
 {
   "url": "https://example.com",
-  "selector": "h1, h2, h3"
+  "selector": "h1, h2, h3",
+  "use_chrome": true
 }
 ```
 
-### 4. `extract_attributes`
+#### 6. `extract_attributes`
 Extract specific attribute values.
 
 ```json
 {
   "url": "https://example.com",
   "selector": "a",
-  "attribute": "href"
+  "attribute": "href",
+  "use_chrome": false
 }
 ```
 
-### 5. `extract_links`
+#### 7. `extract_links`
 Extract all links from a webpage.
 
 ```json
 {
-  "url": "https://example.com"
+  "url": "https://example.com",
+  "use_chrome": true
 }
 ```
 
-### 6. `extract_images`
+#### 8. `extract_images`
 Extract all images with their attributes.
 
 ```json
 {
-  "url": "https://example.com"
+  "url": "https://example.com",
+  "use_chrome": false
 }
 ```
 
-### 7. `extract_forms`
+#### 9. `extract_forms`
 Extract form structures and field information.
 
 ```json
 {
-  "url": "https://example.com"
+  "url": "https://example.com",
+  "use_chrome": true
 }
 ```
 
-### 8. `extract_tables`
+#### 10. `extract_tables`
 Extract table data with headers and rows.
 
 ```json
 {
-  "url": "https://example.com"
+  "url": "https://example.com",
+  "use_chrome": false
 }
 ```
 
-### 9. `extract_metadata`
+#### 11. `extract_metadata`
 Extract page metadata including Open Graph data.
 
 ```json
 {
-  "url": "https://example.com"
+  "url": "https://example.com",
+  "use_chrome": true
 }
 ```
 
-### 10. `search_patterns`
+#### 12. `search_patterns`
 Search for text patterns using regular expressions.
 
 ```json
 {
   "url": "https://example.com",
-  "pattern": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"
+  "pattern": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}",
+  "use_chrome": false
 }
 ```
 
-### 11. `extract_structured_data`
+#### 13. `extract_structured_data`
 Extract JSON-LD and microdata structured information.
 
 ```json
 {
-  "url": "https://example.com"
+  "url": "https://example.com",
+  "use_chrome": true
 }
 ```
 
-### 12. `xpath_to_css`
+### XPath Tools
+
+#### 14. `xpath_to_css`
 Convert XPath expressions to CSS selectors.
 
 ```json
@@ -136,20 +196,92 @@ Convert XPath expressions to CSS selectors.
 }
 ```
 
-### 13. `advanced_scrape`
-Comprehensive scraping with customizable data extraction.
+### Web Automation Tools
+
+#### 15. `click_element`
+Click an element using Chrome automation.
 
 ```json
 {
   "url": "https://example.com",
-  "include_links": true,
-  "include_images": true,
-  "include_forms": true,
-  "include_tables": true,
-  "include_metadata": true,
-  "include_structured_data": true
+  "selector": "button.submit"
 }
 ```
+
+#### 16. `fill_form`
+Fill form fields with data.
+
+```json
+{
+  "url": "https://example.com/form",
+  "form_data": {
+    "username": "john_doe",
+    "email": "john@example.com",
+    "message": "Hello world!"
+  }
+}
+```
+
+#### 17. `submit_form`
+Submit a form on the page.
+
+```json
+{
+  "url": "https://example.com/form",
+  "form_selector": "form#contact-form"
+}
+```
+
+#### 18. `take_screenshot`
+Take a screenshot of a page or element.
+
+```json
+{
+  "url": "https://example.com",
+  "selector": ".main-content"
+}
+```
+
+#### 19. `wait_for_element`
+Wait for an element to appear on the page.
+
+```json
+{
+  "url": "https://example.com",
+  "selector": ".loading-complete",
+  "timeout_ms": 30000
+}
+```
+
+#### 20. `execute_javascript`
+Execute custom JavaScript on the page.
+
+```json
+{
+  "url": "https://example.com",
+  "script": "return document.title"
+}
+```
+
+## Chrome Features
+
+### Headless vs Headed Mode
+- **Headless** (default): Browser runs invisibly in the background
+- **Headed**: Browser window is visible for debugging
+- Set via feature flags in `Cargo.toml`
+
+### Stealth Mode
+Avoids detection by:
+- Spoofing user agent strings
+- Hiding automation indicators
+- Simulating human-like behavior
+- Randomizing request timings
+
+### Screenshot Capabilities
+- Full page screenshots
+- Element-specific screenshots
+- Base64 encoded image data
+- Support for both PNG and JPEG formats
 
 ## CSS Selector Examples
 
@@ -180,34 +312,57 @@ Common XPath patterns and their CSS equivalents:
 
 ## Usage Examples
 
-### Extract Article Headlines
+### Scrape JavaScript-Heavy Site
 ```json
 {
-  "url": "https://news.ycombinator.com",
-  "selector": ".titleline > a"
+  "url": "https://spa-app.example.com",
+  "use_chrome": true,
+  "stealth_mode": true,
+  "wait_for_selector": ".content-loaded"
 }
 ```
 
-### Find Email Addresses
+### Automate Login Form
 ```json
 {
-  "url": "https://example.com/contact",
-  "pattern": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"
+  "url": "https://example.com/login",
+  "form_data": {
+    "username": "user@example.com",
+    "password": "secret123"
+  }
 }
 ```
 
-### Extract Product Information
+### Take Screenshot After Interaction
 ```json
 {
-  "url": "https://shop.example.com/product/123",
-  "selector": ".product-title, .price, .description"
+  "url": "https://example.com",
+  "selector": "button.open-modal"
+}
+```
+Then:
+```json
+{
+  "url": "https://example.com",
+  "selector": ".modal-content"
 }
 ```
 
-### Analyze Form Fields
+### Extract Dynamic Content
 ```json
 {
-  "url": "https://example.com/signup"
+  "url": "https://dynamic-site.example.com",
+  "use_chrome": true,
+  "wait_for_selector": ".ajax-loaded-content",
+  "timeout_seconds": 60
+}
+```
+
+### Execute Custom JavaScript
+```json
+{
+  "url": "https://example.com",
+  "script": "return Array.from(document.querySelectorAll('.product')).map(el => el.textContent)"
 }
 ```
 
@@ -229,7 +384,19 @@ Common XPath patterns and their CSS equivalents:
 2. Build the server:
 
 ```bash
-cargo build --release
+cargo build --release --features chrome
+```
+
+## Feature Flags
+
+Enable specific features in `Cargo.toml`:
+
+```toml
+default = ["chrome"]
+headless = ["spider/chrome"]
+headed = ["spider/chrome_headed"]
+stealth = ["spider/chrome_stealth"]
+screenshots = ["spider/chrome_screenshot"]
 ```
 
 ## Command Line Options
@@ -241,21 +408,37 @@ cargo build --release
 - `--subdomains`: Enable subdomain crawling
 - `--respect-robots <bool>`: Respect robots.txt
 
+## Environment Variables
+
+- `CHROME_URL`: Connect to remote Chrome instance
+- `SCREENSHOT_DIRECTORY`: Directory for screenshot storage
+
 ## Error Handling
 
 All tools include comprehensive error handling:
 
 - Invalid CSS selectors return detailed error messages
 - Network failures are gracefully handled
-- Malformed HTML is parsed with error recovery
+- Chrome connection issues are detected and reported
+- JavaScript execution errors are captured
 - Timeout and rate limiting protection
 
 ## Performance Considerations
 
-- Session reuse for efficient multiple requests
-- Cookie management for authenticated scraping
+- Chrome instances are reused efficiently
+- Network request interception for faster loading
+- Memory-efficient HTML parsing with spider-rs
 - Configurable delays to respect server limits
-- Memory-efficient HTML parsing
+- Smart mode: HTTP first, Chrome only when needed
+
+## Architecture
+
+The server is built entirely with spider-rs:
+- **No scraper crate dependency**: Pure spider implementation
+- **Chrome integration**: Native chrome headless support
+- **Async/await**: Full async operation with tokio
+- **Memory efficient**: Optimized for large-scale scraping
+- **Type safe**: Rust's safety guarantees throughout
 
 ## License
 
@@ -273,9 +456,11 @@ This project is licensed under the MIT License.
 
 For more examples and use cases, see the `examples/` directory:
 
-- E-commerce product scraping
-- News article extraction
-- Social media data collection
-- Form automation scripts
-- Table data extraction
-- SEO metadata analysis
+- E-commerce product scraping with Chrome
+- News article extraction from SPAs
+- Social media data collection with stealth mode
+- Form automation workflows
+- Table data extraction from dynamic tables
+- SEO metadata analysis with JavaScript support
+- Screenshot-based monitoring
+- Complex multi-step automation scenarios
