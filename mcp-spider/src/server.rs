@@ -202,7 +202,7 @@ fn register_select_elements_tool<T: Transport>(server: &mut ServerBuilder<T>) ->
                     .and_then(|v| v.as_str())
                     .context("selector is missing")?;
 
-                let mut session = ScrapingSession::new();
+                let mut session = ScrapingSession::new()?;
                 let html = session.fetch_page(url).await?;
                 let extractor = ElementExtractor::new(&html);
                 let elements = extractor.select_elements(selector)?;
@@ -263,7 +263,7 @@ fn register_extract_text_tool<T: Transport>(server: &mut ServerBuilder<T>) -> Re
                     .and_then(|v| v.as_str())
                     .context("selector is missing")?;
 
-                let mut session = ScrapingSession::new();
+                let mut session = ScrapingSession::new()?;
                 let html = session.fetch_page(url).await?;
                 let extractor = ElementExtractor::new(&html);
                 let texts = extractor.extract_text(selector)?;
@@ -334,7 +334,7 @@ fn register_extract_attributes_tool<T: Transport>(server: &mut ServerBuilder<T>)
                     .and_then(|v| v.as_str())
                     .context("attribute is missing")?;
 
-                let mut session = ScrapingSession::new();
+                let mut session = ScrapingSession::new()?;
                 let html = session.fetch_page(url).await?;
                 let extractor = ElementExtractor::new(&html);
                 let attributes = extractor.extract_attributes(selector, attribute)?;
@@ -387,7 +387,7 @@ fn register_extract_links_tool<T: Transport>(server: &mut ServerBuilder<T>) -> R
                     .and_then(|v| v.as_str())
                     .context("url is missing")?;
 
-                let mut session = ScrapingSession::new();
+                let mut session = ScrapingSession::new()?;
                 let html = session.fetch_page(url).await?;
                 let extractor = ElementExtractor::new(&html);
                 let links = extractor.extract_links()?;
@@ -440,7 +440,7 @@ fn register_extract_images_tool<T: Transport>(server: &mut ServerBuilder<T>) -> 
                     .and_then(|v| v.as_str())
                     .context("url is missing")?;
 
-                let mut session = ScrapingSession::new();
+                let mut session = ScrapingSession::new()?;
                 let html = session.fetch_page(url).await?;
                 let extractor = ElementExtractor::new(&html);
                 let images = extractor.extract_images()?;
@@ -493,7 +493,7 @@ fn register_extract_forms_tool<T: Transport>(server: &mut ServerBuilder<T>) -> R
                     .and_then(|v| v.as_str())
                     .context("url is missing")?;
 
-                let mut session = ScrapingSession::new();
+                let mut session = ScrapingSession::new()?;
                 let html = session.fetch_page(url).await?;
                 let extractor = ElementExtractor::new(&html);
                 let forms = extractor.extract_forms()?;
@@ -546,7 +546,7 @@ fn register_extract_tables_tool<T: Transport>(server: &mut ServerBuilder<T>) -> 
                     .and_then(|v| v.as_str())
                     .context("url is missing")?;
 
-                let mut session = ScrapingSession::new();
+                let mut session = ScrapingSession::new()?;
                 let html = session.fetch_page(url).await?;
                 let extractor = ElementExtractor::new(&html);
                 let tables = extractor.extract_tables()?;
@@ -600,7 +600,7 @@ fn register_extract_metadata_tool<T: Transport>(server: &mut ServerBuilder<T>) -
                     .and_then(|v| v.as_str())
                     .context("url is missing")?;
 
-                let mut session = ScrapingSession::new();
+                let mut session = ScrapingSession::new()?;
                 let html = session.fetch_page(url).await?;
                 let extractor = ElementExtractor::new(&html);
                 let metadata = extractor.extract_metadata();
@@ -661,7 +661,7 @@ fn register_search_patterns_tool<T: Transport>(server: &mut ServerBuilder<T>) ->
                     .and_then(|v| v.as_str())
                     .context("pattern is missing")?;
 
-                let mut session = ScrapingSession::new();
+                let mut session = ScrapingSession::new()?;
                 let html = session.fetch_page(url).await?;
                 let extractor = ElementExtractor::new(&html);
                 let matches = extractor.search_patterns(pattern)?;
@@ -718,7 +718,7 @@ fn register_extract_structured_data_tool<T: Transport>(
                     .and_then(|v| v.as_str())
                     .context("url is missing")?;
 
-                let mut session = ScrapingSession::new();
+                let mut session = ScrapingSession::new()?;
                 let html = session.fetch_page(url).await?;
                 let extractor = ElementExtractor::new(&html);
                 let structured_data = extractor.extract_structured_data()?;
@@ -894,7 +894,7 @@ fn register_advanced_scrape_tool<T: Transport>(server: &mut ServerBuilder<T>) ->
                     .and_then(|v| v.as_bool())
                     .unwrap_or(true);
 
-                let mut session = ScrapingSession::new();
+                let mut session = ScrapingSession::new()?;
                 let html = session.fetch_page(url).await?;
                 let extractor = ElementExtractor::new(&html);
 

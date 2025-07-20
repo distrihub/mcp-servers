@@ -1,9 +1,9 @@
+use crate::scraper_tools::{ElementExtractor, XPathAlternative};
 use async_mcp::{
     protocol::RequestOptions,
     transport::{ClientInMemoryTransport, ServerInMemoryTransport, Transport},
 };
 use serde_json::json;
-use crate::scraper_tools::{ElementExtractor, XPathAlternative};
 
 async fn async_server(transport: ServerInMemoryTransport) {
     let server = crate::build(transport.clone()).unwrap();
@@ -41,20 +41,6 @@ async fn test_methods() -> anyhow::Result<()> {
         )
         .await?;
 
-    // let response = client
-    //     .request(
-    //         "tools/call",
-    //         Some(json!({
-    //             "name": "crawl",
-    //             "arguments": {
-    //                 "url": "https://www.google.com/about/careers/applications/",
-    //                 "depth": 2,
-    //                 "subdomains": false
-    //             }
-    //         })),
-    //         RequestOptions::default(),
-    //     )
-    //     .await?;
     println!("{response}");
 
     Ok(())
@@ -123,7 +109,10 @@ fn test_element_extractor_metadata() {
     assert_eq!(metadata["keywords"], "test, keywords");
     assert_eq!(metadata["open_graph"]["title"], "OG Title");
     assert_eq!(metadata["open_graph"]["description"], "OG Description");
-    assert_eq!(metadata["open_graph"]["image"], "https://example.com/og-image.jpg");
+    assert_eq!(
+        metadata["open_graph"]["image"],
+        "https://example.com/og-image.jpg"
+    );
 }
 
 #[test]
@@ -193,7 +182,7 @@ fn test_extract_forms() {
     assert_eq!(forms.len(), 1);
     assert_eq!(forms[0]["action"], "/submit");
     assert_eq!(forms[0]["method"], "POST");
-    
+
     let fields = forms[0]["fields"].as_array().unwrap();
     assert_eq!(fields.len(), 6); // 5 inputs + 1 select + 1 textarea
 
@@ -239,17 +228,17 @@ fn test_extract_tables() {
     let tables = extractor.extract_tables().unwrap();
 
     assert_eq!(tables.len(), 1);
-    
+
     let headers = tables[0]["headers"].as_array().unwrap();
     // The scraper may be finding all th/td elements in the header row
     assert!(headers.len() >= 3);
     assert_eq!(headers[0], "Name");
     assert_eq!(headers[1], "Age");
     assert_eq!(headers[2], "City");
-    
+
     let rows = tables[0]["rows"].as_array().unwrap();
     assert_eq!(rows.len(), 2);
-    
+
     let first_row = rows[0].as_array().unwrap();
     assert_eq!(first_row[0], "John");
     assert_eq!(first_row[1], "30");
@@ -269,15 +258,19 @@ fn test_search_patterns() {
     "#;
 
     let extractor = ElementExtractor::new(html);
-    
+
     // Test email pattern
-    let emails = extractor.search_patterns(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}").unwrap();
+    let emails = extractor
+        .search_patterns(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
+        .unwrap();
     assert_eq!(emails.len(), 2);
     assert!(emails.contains(&"support@example.com".to_string()));
     assert!(emails.contains(&"sales@example.com".to_string()));
-    
+
     // Test phone pattern
-    let phones = extractor.search_patterns(r"\(\d{3}\)\s\d{3}-\d{4}").unwrap();
+    let phones = extractor
+        .search_patterns(r"\(\d{3}\)\s\d{3}-\d{4}")
+        .unwrap();
     assert_eq!(phones.len(), 1);
     assert_eq!(phones[0], "(555) 123-4567");
 }
@@ -309,11 +302,13 @@ fn test_extract_structured_data() {
     let structured_data = extractor.extract_structured_data().unwrap();
 
     assert!(structured_data.len() >= 1); // At least JSON-LD should be found
-    
+
     // Check JSON-LD data
-    let json_ld = structured_data.iter().find(|item| item["type"] == "json-ld");
+    let json_ld = structured_data
+        .iter()
+        .find(|item| item["type"] == "json-ld");
     assert!(json_ld.is_some());
-    
+
     let json_ld_data = &json_ld.unwrap()["data"];
     assert_eq!(json_ld_data["name"], "John Doe");
     assert_eq!(json_ld_data["email"], "john@example.com");
@@ -323,19 +318,34 @@ fn test_extract_structured_data() {
 fn test_xpath_to_css_conversion() {
     // Test basic XPath to CSS conversion
     assert_eq!(XPathAlternative::xpath_to_css("//div").unwrap(), "div");
-    assert_eq!(XPathAlternative::xpath_to_css("//a[@href]").unwrap(), "a[href]");
-    assert_eq!(XPathAlternative::xpath_to_css("//input[@type='text']").unwrap(), "input[type='text']");
-    assert_eq!(XPathAlternative::xpath_to_css("//div[1]").unwrap(), "div:nth-child(1)");
-    assert_eq!(XPathAlternative::xpath_to_css("/html/body/div").unwrap(), "html > body > div");
+    assert_eq!(
+        XPathAlternative::xpath_to_css("//a[@href]").unwrap(),
+        "a[href]"
+    );
+    assert_eq!(
+        XPathAlternative::xpath_to_css("//input[@type='text']").unwrap(),
+        "input[type='text']"
+    );
+    assert_eq!(
+        XPathAlternative::xpath_to_css("//div[1]").unwrap(),
+        "div:nth-child(1)"
+    );
+    assert_eq!(
+        XPathAlternative::xpath_to_css("/html/body/div").unwrap(),
+        "html > body > div"
+    );
 }
 
 #[test]
 fn test_xpath_common_patterns() {
     let patterns = XPathAlternative::common_patterns();
-    
+
     assert_eq!(patterns.get("//div"), Some(&"div"));
     assert_eq!(patterns.get("//a[@href]"), Some(&"a[href]"));
-    assert_eq!(patterns.get("//input[@type='text']"), Some(&"input[type='text']"));
+    assert_eq!(
+        patterns.get("//input[@type='text']"),
+        Some(&"input[type='text']")
+    );
     assert_eq!(patterns.get("//div[@id='content']"), Some(&"div#content"));
     assert_eq!(patterns.get("//p[1]"), Some(&"p:first-child"));
     assert_eq!(patterns.get("//li[last()]"), Some(&"li:last-child"));
@@ -362,24 +372,24 @@ fn test_css_selector_edge_cases() {
     "#;
 
     let extractor = ElementExtractor::new(html);
-    
+
     // Test class selectors
     let highlighted = extractor.extract_text("p.highlight").unwrap();
     assert_eq!(highlighted, vec!["Highlighted text"]);
-    
+
     // Test ID selectors
     let sidebar_items = extractor.extract_text("#sidebar li").unwrap();
     assert_eq!(sidebar_items.len(), 3);
     assert_eq!(sidebar_items[0], "Item 1");
-    
+
     // Test attribute contains selector
     let main_content = extractor.extract_text("div[class*='main']").unwrap();
     assert_eq!(main_content.len(), 1);
-    
+
     // Test nth-child selectors
     let first_item = extractor.extract_text("li:first-child").unwrap();
     assert_eq!(first_item, vec!["Item 1"]);
-    
+
     let last_item = extractor.extract_text("li:last-child").unwrap();
     assert_eq!(last_item, vec!["Item 3"]);
 }
