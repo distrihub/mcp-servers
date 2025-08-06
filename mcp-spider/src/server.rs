@@ -39,18 +39,23 @@ pub fn build<T: Transport>(t: T) -> Result<Server<T>> {
 }
 
 fn list_resources() -> ResourcesListResponse {
-    let base = Url::parse("https://distribot.local/").unwrap();
-    let resources = [
-        "crawl", "scrape", "extract", "select", "forms", "tables", "metadata",
-    ]
-    .iter()
-    .map(|r| Resource {
-        uri: base.join(r).unwrap(),
-        name: r.to_string(),
-        description: Some(format!("DistriBot {} results", r)),
-        mime_type: Some("application/json".to_string()),
-    })
-    .collect();
+    let resources = if let Ok(base) = Url::parse("https://distribot.local/") {
+        [
+            "crawl", "scrape", "extract", "select", "forms", "tables", "metadata",
+        ]
+        .iter()
+        .filter_map(|r| {
+            base.join(r).ok().map(|uri| Resource {
+                uri,
+                name: r.to_string(),
+                description: Some(format!("DistriBot {} results", r)),
+                mime_type: Some("application/json".to_string()),
+            })
+        })
+        .collect()
+    } else {
+        vec![]
+    };
     ResourcesListResponse {
         resources,
         next_cursor: None,
@@ -131,14 +136,20 @@ fn register_scrape_tool<T: Transport>(server: &mut ServerBuilder<T>) -> Result<(
 
                 let mut is_error = None;
                 let content = if let Some(page) = page {
-                    let input = page.get_bytes().unwrap();
-                    let url = Url::parse(url)?;
-                    let mut reader = std::io::Cursor::new(input);
-                    let product = extract(&mut reader, &url)?;
-                    json!({
-                        "content": product.content,
-                        "text": product.text,
-                    })
+                    if let Some(input) = page.get_bytes() {
+                        let url = Url::parse(url)?;
+                        let mut reader = std::io::Cursor::new(input);
+                        let product = extract(&mut reader, &url)?;
+                        json!({
+                            "content": product.content,
+                            "text": product.text,
+                        })
+                    } else {
+                        is_error = Some(true);
+                        json!({
+                            "error": "No page content available",
+                        })
+                    }
                 } else {
                     is_error = Some(true);
                     json!({

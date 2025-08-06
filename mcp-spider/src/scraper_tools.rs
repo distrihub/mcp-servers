@@ -101,11 +101,16 @@ impl ElementExtractor {
         let links = self
             .select_elements("a[href]")?
             .into_iter()
-            .map(|mut link| {
+            .filter_map(|mut link| {
                 if let Some(href) = link.get("href") {
-                    link["absolute_url"] = json!(self.resolve_url(href.as_str().unwrap_or("")));
+                    if let Some(href_str) = href.as_str() {
+                        if !href_str.trim().is_empty() {
+                            link["absolute_url"] = json!(self.resolve_url(href_str));
+                            return Some(link);
+                        }
+                    }
                 }
-                link
+                None
             })
             .collect();
 
@@ -117,11 +122,16 @@ impl ElementExtractor {
         let images = self
             .select_elements("img")?
             .into_iter()
-            .map(|mut img| {
+            .filter_map(|mut img| {
                 if let Some(src) = img.get("src") {
-                    img["absolute_url"] = json!(self.resolve_url(src.as_str().unwrap_or("")));
+                    if let Some(src_str) = src.as_str() {
+                        if !src_str.trim().is_empty() {
+                            img["absolute_url"] = json!(self.resolve_url(src_str));
+                            return Some(img);
+                        }
+                    }
                 }
-                img
+                None
             })
             .collect();
 

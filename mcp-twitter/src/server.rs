@@ -54,16 +54,21 @@ pub fn build<T: Transport>(t: T) -> Result<Server<T>> {
 }
 
 fn list_resources() -> ResourcesListResponse {
-    let base = Url::parse("https://distr.ai/").unwrap();
-    let resources = ["timeline", "messages"]
-        .iter()
-        .map(|r| Resource {
-            uri: base.join(r).unwrap(),
-            name: r.to_string(),
-            description: None,
-            mime_type: Some("plain/text".to_string()),
+    let resources = Url::parse("https://distr.ai/")
+        .map(|base| {
+            ["timeline", "messages"]
+                .iter()
+                .filter_map(|r| {
+                    base.join(r).ok().map(|uri| Resource {
+                        uri,
+                        name: r.to_string(),
+                        description: None,
+                        mime_type: Some("plain/text".to_string()),
+                    })
+                })
+                .collect()
         })
-        .collect();
+        .unwrap_or_else(|_| vec![]);
     ResourcesListResponse {
         resources,
         next_cursor: None,
