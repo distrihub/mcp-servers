@@ -1,5 +1,5 @@
 [package]
-name = "mcp-spider"
+name = "mcp-crawl"
 description = "MCP server for web crawling and scraping using spider-rs with comprehensive feature support"
 version.workspace = true
 edition.workspace = true
@@ -8,11 +8,11 @@ authors.workspace = true
 repository.workspace = true
 
 [[bin]]
-name = "mcp-spider"
+name = "mcp-crawl"
 path = "src/main.rs"
 
 [lib]
-name = "mcp_spider"
+name = "mcp_crawl"
 path = "src/lib.rs"
 
 [dependencies]
@@ -48,6 +48,7 @@ cssparser = "0.31"
 base64 = "0.21"
 mime = "0.3"
 cookie = "0.17"
+html-escape = "0.2"
 
 
 [dev-dependencies]

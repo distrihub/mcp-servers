@@ -1,10 +1,10 @@
 use anyhow::Result;
 use async_mcp::transport::ServerStdioTransport;
 use clap::Parser;
-use mcp_spider::build;
+use mcp_crawl::build;
 
 #[derive(Parser)]
-#[command(name = "mcp-spider")]
+#[command(name = "mcp-crawl")]
 #[command(about = "MCP server for web crawling and scraping using spider-rs")]
 #[command(version)]
 struct Cli {
@@ -13,7 +13,7 @@ struct Cli {
     debug: bool,
 
     /// User agent string
-    #[arg(long, default_value = "mcp-spider/0.1.0")]
+    #[arg(long, default_value = "mcp-crawl/0.1.0")]
     user_agent: String,
 
     /// Default delay between requests in seconds

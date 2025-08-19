@@ -393,3 +393,103 @@ fn test_css_selector_edge_cases() {
     let last_item = extractor.extract_text("li:last-child").unwrap();
     assert_eq!(last_item, vec!["Item 3"]);
 }
+
+#[test]
+fn test_extract_tables_financial_data() {
+    // Simulated HTML structure similar to investing.com NYSE components page
+    let html = r#"
+        <html>
+        <head>
+            <title>NYSE US 100 Components</title>
+        </head>
+        <body>
+            <table class="genTbl closedTbl crossRatesTbl" cellspacing="0" cellpadding="0">
+                <thead>
+                    <tr>
+                        <th class="left">Name</th>
+                        <th class="right">Last</th>
+                        <th class="right">High</th>
+                        <th class="right">Low</th>
+                        <th class="right">Chg.</th>
+                        <th class="right">Chg. %</th>
+                        <th class="right">Vol.</th>
+                        <th class="right">Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="left">
+                            <a href="/equities/boeing-co" class="bold">Boeing Co</a>
+                        </td>
+                        <td class="right">225.00</td>
+                        <td class="right">232.43</td>
+                        <td class="right">223.75</td>
+                        <td class="right redFont">-7.19</td>
+                        <td class="right redFont">-3.09%</td>
+                        <td class="right">8.57M</td>
+                        <td class="right">15:59:59</td>
+                    </tr>
+                    <tr>
+                        <td class="left">
+                            <a href="/equities/apple-computer-inc" class="bold">Apple Inc</a>
+                        </td>
+                        <td class="right">150.25</td>
+                        <td class="right">152.10</td>
+                        <td class="right">148.90</td>
+                        <td class="right greenFont">+2.15</td>
+                        <td class="right greenFont">+1.45%</td>
+                        <td class="right">42.1M</td>
+                        <td class="right">16:00:00</td>
+                    </tr>
+                    <tr>
+                        <td class="left">
+                            <a href="/equities/microsoft-corp" class="bold">Microsoft Corporation</a>
+                        </td>
+                        <td class="right">378.85</td>
+                        <td class="right">380.50</td>
+                        <td class="right">375.20</td>
+                        <td class="right greenFont">+3.65</td>
+                        <td class="right greenFont">+0.97%</td>
+                        <td class="right">18.9M</td>
+                        <td class="right">16:00:00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </body>
+        </html>
+    "#;
+
+    let extractor = ElementExtractor::new(html);
+    let tables = extractor.extract_tables().unwrap();
+
+    assert_eq!(tables.len(), 1);
+    
+    let table = &tables[0];
+    let headers = table["headers"].as_array().unwrap();
+    let rows = table["rows"].as_array().unwrap();
+
+    // Verify headers are clean text
+    assert_eq!(headers.len(), 8);
+    assert_eq!(headers[0], "Name");
+    assert_eq!(headers[1], "Last");
+    assert_eq!(headers[2], "High");
+    assert_eq!(headers[3], "Low");
+    assert_eq!(headers[4], "Chg.");
+    assert_eq!(headers[5], "Chg. %");
+    assert_eq!(headers[6], "Vol.");
+    assert_eq!(headers[7], "Time");
+
+    // Verify rows contain clean text data
+    assert_eq!(rows.len(), 3);
+    
+    // Check that we get clean company names without HTML
+    let boeing_row = rows[0].as_array().unwrap();
+    assert_eq!(boeing_row[0], "Boeing Co");
+    assert_eq!(boeing_row[1], "225.00");
+    
+    let apple_row = rows[1].as_array().unwrap();
+    assert_eq!(apple_row[0], "Apple Inc");
+    
+    let msft_row = rows[2].as_array().unwrap();
+    assert_eq!(msft_row[0], "Microsoft Corporation");
+}

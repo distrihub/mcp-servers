@@ -167,16 +167,16 @@ The server supports full CSS selector syntax:
 
 Common XPath patterns and their CSS equivalents:
 
-| XPath | CSS Selector |
-|-------|-------------|
-| `//div` | `div` |
-| `//a[@href]` | `a[href]` |
-| `//input[@type='text']` | `input[type='text']` |
-| `//div[@id='content']` | `div#content` |
+| XPath                                   | CSS Selector               |
+| --------------------------------------- | -------------------------- |
+| `//div`                                 | `div`                      |
+| `//a[@href]`                            | `a[href]`                  |
+| `//input[@type='text']`                 | `input[type='text']`       |
+| `//div[@id='content']`                  | `div#content`              |
 | `//span[contains(@class, 'highlight')]` | `span[class*='highlight']` |
-| `//p[1]` | `p:first-child` |
-| `//li[last()]` | `li:last-child` |
-| `/html/body/div` | `html > body > div` |
+| `//p[1]`                                | `p:first-child`            |
+| `//li[last()]`                          | `li:last-child`            |
+| `/html/body/div`                        | `html > body > div`        |
 
 ## Usage Examples
 
@@ -219,7 +219,7 @@ Common XPath patterns and their CSS equivalents:
 {
   "mcpServers": {
     "spider": {
-      "command": "mcp-spider",
+      "command": "mcp-crawl",
       "args": ["--debug"]
     }
   }

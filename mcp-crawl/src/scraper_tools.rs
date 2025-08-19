@@ -5,6 +5,8 @@ use scraper::{ElementRef, Html, Selector};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use url::Url;
+use readability::extractor;
+use html_escape;
 
 pub struct ScrapingSession {
     client: Client,
@@ -15,7 +17,7 @@ impl ScrapingSession {
     pub fn new() -> Result<Self> {
         let client = Client::builder()
             .cookie_store(true)
-            .user_agent("mcp-spider/1.0")
+            .user_agent("mcp-crawl/1.0")
             .build()
             .map_err(|e| anyhow::anyhow!("Failed to build HTTP client: {}", e))?;
 
@@ -98,16 +100,21 @@ impl ElementExtractor {
 
     /// Extract links from the page
     pub fn extract_links(&self) -> Result<Vec<Value>> {
-        let links = self
-            .select_elements("a[href]")?
-            .into_iter()
-            .filter_map(|mut link| {
-                if let Some(href) = link.get("href") {
-                    if let Some(href_str) = href.as_str() {
-                        if !href_str.trim().is_empty() {
-                            link["absolute_url"] = json!(self.resolve_url(href_str));
-                            return Some(link);
-                        }
+        let selector = Selector::parse("a[href]")
+            .map_err(|e| anyhow::anyhow!("Invalid CSS selector: {}", e))?;
+
+        let links: Vec<Value> = self
+            .document
+            .select(&selector)
+            .filter_map(|element| {
+                if let Some(href) = element.value().attr("href") {
+                    let text = self.clean_text(&element.text().collect::<String>());
+                    if !href.trim().is_empty() {
+                        return Some(json!({
+                            "href": href,
+                            "text": text,
+                            "absolute_url": self.resolve_url(href)
+                        }));
                     }
                 }
                 None
@@ -119,16 +126,21 @@ impl ElementExtractor {
 
     /// Extract images from the page
     pub fn extract_images(&self) -> Result<Vec<Value>> {
-        let images = self
-            .select_elements("img")?
-            .into_iter()
-            .filter_map(|mut img| {
-                if let Some(src) = img.get("src") {
-                    if let Some(src_str) = src.as_str() {
-                        if !src_str.trim().is_empty() {
-                            img["absolute_url"] = json!(self.resolve_url(src_str));
-                            return Some(img);
-                        }
+        let selector = Selector::parse("img")
+            .map_err(|e| anyhow::anyhow!("Invalid CSS selector: {}", e))?;
+
+        let images: Vec<Value> = self
+            .document
+            .select(&selector)
+            .filter_map(|element| {
+                if let Some(src) = element.value().attr("src") {
+                    if !src.trim().is_empty() {
+                        return Some(json!({
+                            "src": src,
+                            "alt": element.value().attr("alt").unwrap_or(""),
+                            "title": element.value().attr("title").unwrap_or(""),
+                            "absolute_url": self.resolve_url(src)
+                        }));
                     }
                 }
                 None
@@ -181,7 +193,7 @@ impl ElementExtractor {
     pub fn extract_tables(&self) -> Result<Vec<Value>> {
         let table_selector = Selector::parse("table")
             .map_err(|e| anyhow::anyhow!("Failed to parse table selector: {}", e))?;
-        let header_selector = Selector::parse("thead tr th, tr:first-child th, tr:first-child td")
+        let header_selector = Selector::parse("thead tr th, tr:first-child th")
             .map_err(|e| anyhow::anyhow!("Failed to parse header selector: {}", e))?;
         let row_selector = Selector::parse("tbody tr, tr")
             .map_err(|e| anyhow::anyhow!("Failed to parse row selector: {}", e))?;
@@ -191,28 +203,57 @@ impl ElementExtractor {
         let tables: Vec<Value> = self
             .document
             .select(&table_selector)
-            .map(|table| {
-                // Extract headers
-                let headers: Vec<String> = table
+            .filter_map(|table| {
+                // Extract headers - try multiple strategies
+                let mut headers: Vec<String> = table
                     .select(&header_selector)
-                    .map(|th| th.text().collect::<String>().trim().to_string())
+                    .map(|th| self.clean_text(&th.text().collect::<String>()))
+                    .filter(|h| !h.is_empty())
                     .collect();
 
-                // Extract rows
+                // If no headers found in thead, try first row
+                if headers.is_empty() {
+                    if let Some(first_row) = table.select(&row_selector).next() {
+                        headers = first_row
+                            .select(&cell_selector)
+                            .map(|cell| self.clean_text(&cell.text().collect::<String>()))
+                            .filter(|h| !h.is_empty())
+                            .collect();
+                    }
+                }
+
+                // Extract data rows - skip header row if we found headers
                 let rows: Vec<Vec<String>> = table
                     .select(&row_selector)
-                    .skip(if !headers.is_empty() { 1 } else { 0 }) // Skip header row if exists
+                    .skip(if !headers.is_empty() { 1 } else { 0 })
                     .map(|row| {
                         row.select(&cell_selector)
-                            .map(|cell| cell.text().collect::<String>().trim().to_string())
+                            .map(|cell| {
+                                // Get both inner HTML and text content for better cleaning
+                                let text_content = cell.text().collect::<String>();
+                                let inner_html = cell.inner_html();
+                                
+                                // If cell has significant HTML content, use readability
+                                if inner_html.len() > text_content.len() + 20 {
+                                    self.clean_text(&inner_html)
+                                } else {
+                                    self.clean_text(&text_content)
+                                }
+                            })
                             .collect()
                     })
+                    .filter(|row: &Vec<String>| !row.is_empty() && row.iter().any(|cell| !cell.is_empty()))
                     .collect();
 
-                json!({
-                    "headers": headers,
-                    "rows": rows
-                })
+                // Only return tables with meaningful data
+                if !rows.is_empty() || !headers.is_empty() {
+                    Some(json!({
+                        "headers": headers,
+                        "rows": rows
+                    }))
+                } else {
+                    None
+                }
             })
             .collect();
 
@@ -321,17 +362,16 @@ impl ElementExtractor {
         }
 
         let text = element.text().collect::<String>().trim().to_string();
-        let inner_html = element.inner_html();
 
         json!({
             "tag": tag_name,
-            "attributes": attributes,
             "text": text,
-            "inner_html": inner_html,
             "href": attributes.get("href"),
             "src": attributes.get("src"),
             "alt": attributes.get("alt"),
-            "title": attributes.get("title")
+            "title": attributes.get("title"),
+            "class": attributes.get("class"),
+            "id": attributes.get("id")
         })
     }
 
@@ -343,6 +383,58 @@ impl ElementExtractor {
         // This is a simplified URL resolution
         // In a real implementation, you'd want more robust URL handling
         relative_url.to_string()
+    }
+
+    /// Clean text by removing extra whitespace and normalizing using readability
+    fn clean_text(&self, text: &str) -> String {
+        // If the text contains HTML, use readability to extract clean text
+        if text.contains('<') && text.contains('>') {
+            // Create a minimal HTML document for readability processing
+            let html_doc = format!("<html><body>{}</body></html>", text);
+            match extractor::extract(&mut html_doc.as_bytes(), &url::Url::parse("http://example.com").unwrap()) {
+                Ok(article) => {
+                    let cleaned = article.text.split_whitespace().collect::<Vec<_>>().join(" ");
+                    cleaned.trim().to_string()
+                }
+                Err(_) => {
+                    // Fallback to simple cleaning if readability fails
+                    self.simple_clean_text(text)
+                }
+            }
+        } else {
+            // For plain text, just normalize whitespace
+            self.simple_clean_text(text)
+        }
+    }
+
+    /// Simple text cleaning without readability
+    fn simple_clean_text(&self, text: &str) -> String {
+        // Remove HTML entities and normalize whitespace
+        let cleaned = html_escape::decode_html_entities(text);
+        let normalized = cleaned.split_whitespace().collect::<Vec<_>>().join(" ");
+        normalized.trim().to_string()
+    }
+
+    /// Extract clean readable content using readability
+    pub fn extract_readable_content(&self, base_url: &str) -> Result<Value> {
+        let html_content = self.document.html();
+        
+        match extractor::extract(&mut html_content.as_bytes(), &base_url.parse()?) {
+            Ok(article) => {
+                Ok(json!({
+                    "title": article.title,
+                    "content": article.text,
+                    "html": article.content,
+                    "length": article.text.len(),
+                    "excerpt": if article.text.len() > 200 { 
+                        format!("{}...", &article.text[..200]) 
+                    } else { 
+                        article.text.clone() 
+                    }
+                }))
+            }
+            Err(e) => Err(anyhow::anyhow!("Failed to extract readable content: {}", e))
+        }
     }
 }
 

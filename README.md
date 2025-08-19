@@ -8,12 +8,12 @@ This workspace contains multiple MCP server implementations, each providing spec
 
 ## Available MCP Servers
 
-| Server          | Status             | Description                                        | Tools                                                                                      | Resources                                                                    | Use Cases                                           |
-| --------------- | ------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------------- |
-| **mcp-tavily**  | 🔧 Work in Progress | Tavily search API integration                      | `search`, `search_news`, `get_extract`                                                     | `tavily://search/{query}`                                                    | AI-powered web search, news aggregation             |
-| **mcp-coder**   | 🔧 Work in Progress | File system operations, code analysis & formatting | `read_file`, `write_file`, `search_files`, `list_directory`, `get_project_structure`       | `file://{path}`, `directory://{path}`                                        | Code development, file management, project analysis |
-| **mcp-twitter** | 🔧 Work in Progress | Twitter/X API integration                          | `post_tweet`, `search_tweets`, `get_user_info`, `get_user_timeline`, `get_tweet_analytics` | `twitter://user/{id}`, `twitter://tweet/{id}`, `twitter://trends/{location}` | Social media automation, content posting, analytics |
-| **mcp-spider**  | 🔧 Work in Progress | Advanced web crawling with spider-rs               | `scrape`                                                                                   | `spider://scrape/{url}`                                                      | Web data extraction, site mapping, content analysis |
+| Server          | Status             | Description                                        | Tools                                                                                                                                                | Resources                                                                      | Use Cases                                                     |
+| --------------- | ------------------ | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| **mcp-tavily**  | 🔧 Work in Progress | Tavily search API integration                      | `search`, `search_news`, `get_extract`                                                                                                               | `tavily://search/{query}`                                                      | AI-powered web search, news aggregation                       |
+| **mcp-coder**   | 🔧 Work in Progress | File system operations, code analysis & formatting | `read_file`, `write_file`, `search_files`, `list_directory`, `get_project_structure`                                                                 | `file://{path}`, `directory://{path}`                                          | Code development, file management, project analysis           |
+| **mcp-twitter** | 🔧 Work in Progress | Twitter/X API integration                          | `post_tweet`, `search_tweets`, `get_user_info`, `get_user_timeline`, `get_tweet_analytics`                                                           | `twitter://user/{id}`, `twitter://tweet/{id}`, `twitter://trends/{location}`   | Social media automation, content posting, analytics           |
+| **mcp-crawl**   | 🔧 Work in Progress | Advanced web crawling with spider-rs               | `scrape`                                                                                                                                             | `spider://scrape/{url}`                                                        | Web data extraction, site mapping, content analysis           |
 | **mcp-reddit**  | 🔧 Work in Progress | Reddit API integration                             | `get_posts`, `search_posts`, `get_comments`, `get_subreddit_info`, `get_user_info`, `get_trending_subreddits`, `get_user_posts`, `get_user_comments` | `reddit://posts`, `reddit://comments`, `reddit://subreddits`, `reddit://users` | Social media monitoring, content analysis, community insights |
 
 
@@ -36,7 +36,7 @@ cargo build --release
 # Or build individual servers
 cargo build --release --bin mcp-coder
 cargo build --release --bin mcp-twitter
-cargo build --release --bin mcp-spider
+cargo build --release --bin mcp-crawl
 cargo build --release --bin mcp-tavily
 cargo build --release --bin mcp-reddit
 ```
@@ -65,7 +65,7 @@ Add to your Claude Desktop configuration:
       }
     },
     "spider": {
-      "command": "/path/to/mcp-servers/target/release/mcp-spider",
+      "command": "/path/to/mcp-servers/target/release/mcp-crawl",
       "args": ["--stealth-mode"]
     },
     "crawler": {
@@ -117,7 +117,7 @@ These servers are specifically designed to work with the [distri framework](http
        env:
          TWITTER_BEARER_TOKEN: "{{secrets.twitter_bearer}}"
      - name: spider
-       command: mcp-spider
+       command: mcp-crawl
        args: ["--stealth-mode"]
      - name: tavily
        command: mcp-tavily
@@ -156,7 +156,7 @@ npm install -g @modelcontextprotocol/inspector
 # Debug any server
 npx @modelcontextprotocol/inspector ./target/release/mcp-coder
 npx @modelcontextprotocol/inspector ./target/release/mcp-twitter
-npx @modelcontextprotocol/inspector ./target/release/mcp-spider
+npx @modelcontextprotocol/inspector ./target/release/mcp-crawl
 npx @modelcontextprotocol/inspector ./target/release/mcp-tavily
 npx @modelcontextprotocol/inspector ./target/release/mcp-reddit
 

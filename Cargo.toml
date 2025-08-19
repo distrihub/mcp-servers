@@ -1,5 +1,11 @@
 [workspace]
-members = ["mcp-twitter", "mcp-spider", "mcp-tavily", "mcp-reddit", "mcp-filesystem"]
+members = [
+  "mcp-twitter",
+  "mcp-crawl",
+  "mcp-tavily",
+  "mcp-reddit",
+  "mcp-filesystem",
+]
 resolver = "2"
 
 [workspace.package]
